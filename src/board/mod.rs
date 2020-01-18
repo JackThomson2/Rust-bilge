@@ -8,11 +8,10 @@ use std::sync::{Arc, Mutex};
 
 use rand::Rng;
 
-use std::collections::hash_map::DefaultHasher;
 use std::hash::{Hash, Hasher};
 use std::thread;
 
-use fasthash::{FastHasher, MetroHasher};
+use fasthash::MetroHasher;
 
 pub type PeerMap = Arc<dashmap::DashMap<u64, HashEntry>>;
 
@@ -24,6 +23,8 @@ pub struct HashEntry {
 #[derive(Clone)]
 pub struct GameState {
     board: [defs::Pieces; 72],
+    water_level: i8,
+    to_clear: [bool; 72],
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -42,6 +43,52 @@ impl GameState {
                 println!();
                 cntr = 0;
             }
+        }
+    }
+
+    pub fn jelly(&mut self, clearing: defs::Pieces) {
+        for i in 0..self.board.len() - 1 {
+            if (self.board[i] == clearing) {
+                self.to_clear[i] = true
+            }
+        }
+    }
+
+    pub fn puff(&mut self, pos: usize) {
+        let x = pos % 6;
+        let y = pos / 6 as usize;
+
+        let up = y > 0;
+        let down = y < 11;
+        let right = x < 5;
+        let left = x > 0;
+
+        self.to_clear[pos] = true;
+
+        if up {
+            self.to_clear[pos - 6] = true;
+        }
+        if down {
+            self.to_clear[pos + 6] = true;
+        }
+        if left {
+            self.to_clear[pos - 1] = true;
+        }
+        if right {
+            self.to_clear[pos + 1] = true;
+        }
+
+        if up && right {
+            self.to_clear[pos - 5] = true;
+        }
+        if up && left {
+            self.to_clear[pos - 7] = true;
+        }
+        if down && right {
+            self.to_clear[pos + 7] = true;
+        }
+        if down && left {
+            self.to_clear[pos + 5] = true;
         }
     }
 
@@ -164,131 +211,14 @@ impl GameState {
     }
 }
 
-fn dfs(start: GameState, map: PeerMap, depth: i8) -> SearchResult {
-    let hash = start.hash_me();
-
-    if map.contains_key(&hash) {
-        let found = map.get(&hash).unwrap();
-
-        if found.depth > depth {
-            return found.search_res;
-        }
-    }
-
-    let moves = start.get_moves();
-
-    let mut best_move_score = -9999;
-    let mut best_move = 0;
-
-    for i in moves.iter() {
-        let mut clone = copy_board(&start);
-        clone.swap(*i);
-
-        let mut score = clone.clear_board();
-
-        if depth > 1 {
-            score += dfs(clone, map.clone(), depth - 1).score;
-        }
-
-        if score > best_move_score {
-            best_move_score = score;
-            best_move = *i;
-        }
-    }
-
-    let res = SearchResult {
-        move_id: best_move,
-        score: best_move_score,
-    };
-
-    map.insert(
-        hash,
-        HashEntry {
-            search_res: res,
-            depth,
-        },
-    );
-
-    res
-}
-
-pub fn search_board(start: GameState) -> usize {
-    let map = PeerMap::new(DashMap::new());
-
-    let moves = start.get_moves();
-    let moves_len = moves.len();
-    let mut move_values = moves.into_iter().peekable();
-
-    let mut children = vec![];
-
-    let mut best_move_score = -9999;
-    let mut best_move = 0;
-
-    let max = num_cpus::get();
-
-    for c in 0..max {
-        let copy = map.clone();
-        let chunk: Vec<_> = move_values.by_ref().take(moves_len / max).collect();
-
-        let board_copy = copy_board(&start);
-        children.push(thread::spawn(move || {
-            println!("Spinning up thread {}", c);
-
-            let mut best_move_score_thread = -9999;
-            let mut best_move_thread = 0;
-            for i in chunk.iter() {
-                let mut clone = copy_board(&board_copy);
-                clone.swap(*i);
-                let score = dfs(clone, copy.clone(), 4).score;
-                if score > best_move_score_thread {
-                    best_move_score_thread = score;
-                    best_move_thread = *i;
-                }
-            }
-
-            println!("Thread {} is done", c);
-
-            SearchResult {
-                move_id: best_move_thread,
-                score: best_move_score_thread,
-            }
-        }));
-    }
-
-    for child in children {
-        // Wait for the thread to finish. Returns a result.
-        let res = child.join().unwrap();
-
-        if res.score > best_move_score {
-            best_move_score = res.score;
-            best_move = res.move_id;
-        }
-    }
-
-    println!("Final hash table size {}", map.len());
-
-    println!("Best score was {}", best_move_score);
-
-    best_move
-}
-
-pub fn generate_rand_board() -> GameState {
-    let mut board = [defs::Pieces::CLEARED; 72];
-    let mut rng = rand::thread_rng();
-
-    for i in board.iter_mut() {
-        *i = defs::piece_from_num(&rng.gen_range(1, 7))
-    }
-
-    GameState { board }
-}
-
 pub fn copy_board(copying: &GameState) -> GameState {
     copying.clone()
 }
 
 pub fn generate_game() -> GameState {
     GameState {
+        water_level: 3,
         board: [defs::Pieces::CLEARED; 72],
+        to_clear: [false; 72],
     }
 }
