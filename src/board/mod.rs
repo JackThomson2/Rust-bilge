@@ -1,4 +1,4 @@
-mod defs;
+pub(crate) mod defs;
 
 use colored::*;
 use defs::Pieces::*;
@@ -397,6 +397,15 @@ pub fn generate_rand_board() -> GameState {
 
 pub fn copy_board(copying: &GameState) -> GameState {
     copying.clone()
+}
+
+pub fn board_from_array(board: [defs::Pieces; 72]) -> GameState {
+    GameState {
+        water_level: 3,
+        board,
+        to_clear: [false; 72],
+        something_cleared: false
+    }
 }
 
 pub fn generate_game() -> GameState {

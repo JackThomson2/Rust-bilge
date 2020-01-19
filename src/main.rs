@@ -17,17 +17,12 @@ use jemallocator::Jemalloc;
 static GLOBAL: Jemalloc = Jemalloc;
 
 fn main() {
+
+    let mut searcher = image::ImageCapture::new();
     let now = Instant::now();
 
-    let mut game = board::generate_rand_board();
 
-    game.draw();
-
-    println!("\n\n~~~~~~~~~\n\n");
-
-    game.clean_board();
-
-    game.draw();
+    searcher.load_test_image();
 
     //println!("Best move is {}", board::search_board(game));
 
