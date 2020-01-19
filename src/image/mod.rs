@@ -11,10 +11,13 @@ fn LoadNeedle() -> Image::GenericImageView {
 }
 
 fn FindNeedle(haystack: &dyn GenericImageView, needle: &dyn GenericImageView) -> Location {
-    for ox in 0..haystack.width() {
-        'outer: for oy in 0..haystack.height() {
-            for ix in 0..needle.width() {
-                for iy in 0..needle.height() {
+    let needle_width = needle.width();
+    let needle_height = needle.height();
+
+    for ox in 0..haystack.width() - needle_width {
+        'outer: for oy in needle_height..haystack.height() {
+            for ix in 0..needle_width {
+                for iy in 0..needle_height {
                     if haystack.get_pixel(ox + ix, oy + iy) !=  needle.get_pixel(ix, iy) {
                         continue 'outer;
                     }
