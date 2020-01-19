@@ -19,7 +19,13 @@ fn main() {
 
     let mut game = board::generate_rand_board();
 
-    game.clear_board();
+    game.draw();
+
+    println!("\n\n~~~~~~~~~\n\n");
+
+    game.clean_board();
+
+    game.draw();
 
     //println!("Best move is {}", board::search_board(game));
 

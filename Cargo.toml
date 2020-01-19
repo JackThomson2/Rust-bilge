@@ -11,6 +11,7 @@ rand = "*"
 dashmap = "3.2.1"
 num_cpus = "1.1"
 fasthash = "0.4"
+colored = "1.9"
 
 [target.'cfg(not(target_env = "msvc"))'.dependencies]
 jemallocator = "0.3.2"
