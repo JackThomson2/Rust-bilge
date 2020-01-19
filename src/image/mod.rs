@@ -1,4 +1,7 @@
-use image::GenericImageView;
+mod colours;
+
+use image::{GenericImageView, DynamicImage};
+use colours::*;
 
 struct Location {
     found: bool,
@@ -6,11 +9,13 @@ struct Location {
     y: u32
 }
 
-fn LoadNeedle() -> Image::GenericImageView {
+
+
+fn LoadNeedle() -> DynamicImage {
     image::open("tests/images/jpg/progressive/cat.jpg").unwrap()
 }
 
-fn FindNeedle(haystack: &dyn GenericImageView, needle: &dyn GenericImageView) -> Location {
+fn FindNeedle(haystack: &DynamicImage, needle: &DynamicImage) -> Location {
     let needle_width = needle.width();
     let needle_height = needle.height();
 
@@ -36,5 +41,22 @@ pub fn LoadTestImage() {
     let needle = LoadNeedle();
     let img = image::open("tests/images/jpg/progressive/cat.jpg").unwrap();
 
+    let imageLoc = FindNeedle(&img, &needle);
+
+    if !imageLoc.found {
+        println!("Couldn't find image");
+        return;
+    }
+
+    let read_x = imageLoc.x + 29;
+    let read_y = imageLoc.y + 29;
+
+    for y in 0..12 {
+        for x in 0..6 {
+            let pixel = img.get_pixel(read_x + (x * 45), read_y + (y * 45));
+
+
+        }
+    }
 
 }
