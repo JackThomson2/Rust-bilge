@@ -1,4 +1,6 @@
 mod board;
+mod image;
+
 use dashmap::DashMap;
 
 use num_cpus;
