@@ -35,8 +35,9 @@ impl GameState {
     pub fn draw(&self) {
         let mut cntr = 0;
 
-        for y in (0..11).rev() {
+        for y in (0..12).rev() {
             for x in 0..6 {
+                //print!("{}|", x + (y * 6));
                 let piece = self.board[x + (y * 6)];
 
                 if y <= self.water_level {

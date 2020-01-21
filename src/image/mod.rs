@@ -93,7 +93,7 @@ impl ImageCapture {
 
         for y in 0..12 {
             for x in 0..6 {
-                let pixel = img.get_pixel(read_x + (x * 45), read_y + (y * 45));
+                let pixel = img.get_pixel(read_x + (x * 45), read_y + ((11 - y) * 45));
                 board[(x + (y * 6)) as usize] = get_piece_from_pixel(pixel);
             }
         }
@@ -102,12 +102,11 @@ impl ImageCapture {
 
         println!("{:?}", now.elapsed());
 
+        game.draw();
     }
 
-    pub fn take_screenshot(&mut self) {
-        let mut bitflipped = Vec::with_capacity(self.screen_width * self.screen_height * 4);
-
-        let now = Instant::now();
+    pub fn take_screenshot(&mut self) -> Vec<Rgba<u8>> {
+        let mut bitflipped:Vec<Rgba<u8>> = Vec::with_capacity(self.screen_width * self.screen_height * 4);
 
         loop {
             let buffer = match self.screen.frame() {
@@ -126,16 +125,15 @@ impl ImageCapture {
             for y in 0..self.screen_height {
                 for x in 0..self.screen_width {
                     let i = stride * y + 4 * x;
-                    bitflipped.extend_from_slice(&[
+                    bitflipped.push(Rgba([
                         buffer[i],
                         buffer[i + 1],
                         buffer[i + 2],
                         255,
-                    ]);
+                    ]));
                 }
             }
-
-            return;
+            return bitflipped;
         }
     }
 }
