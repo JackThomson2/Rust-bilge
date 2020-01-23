@@ -247,8 +247,8 @@ impl GameState {
     fn shift_everything(&mut self) {
         for x in 0..6 {
             let mut last = 9999;
-            for y in 0..12 {
-                let piece = self.board[x + (y * 6)];
+            for y in (0..12).rev() {
+                let piece = self.board[x - (y * 6)];
 
                 if piece == CLEARED && last == 9999 {
                     last = y;

@@ -9,12 +9,9 @@ use board::defs::Pieces::*;
 use scrap::{Capturer, Display};
 
 use std::io::ErrorKind::WouldBlock;
-use std::time::{Duration, Instant};
-use std::borrow::Borrow;
-use std::thread;
 
-use image::{GenericImageView, DynamicImage, Rgba};
 use colours::*;
+use image::{DynamicImage, GenericImageView, Rgba};
 
 fn load_needle() -> DynamicImage {
     image::open("test/TopLeft.png").unwrap()
@@ -23,42 +20,20 @@ fn load_needle() -> DynamicImage {
 struct Location {
     found: bool,
     x: u32,
-    y: u32
-}
-
-fn find_needle(haystack: &DynamicImage, needle: &DynamicImage) -> Location {
-    let needle_width = needle.width();
-    let needle_height = needle.height();
-
-    for ox in 0..haystack.width() - needle_width {
-        'outer: for oy in needle_height..haystack.height() {
-            for ix in 0..needle_width {
-                for iy in 0..needle_height {
-                    if haystack.get_pixel(ox + ix, oy + iy) !=  needle.get_pixel(ix, iy) {
-                        continue 'outer;
-                    }
-                }
-            }
-
-            // Image matches
-            return Location { found: true, x: ox, y: oy}
-        }
-    }
-
-    Location { found: false, x: 0,  y:0}
+    y: u32,
 }
 
 pub struct ImageCapture {
     screen: Capturer,
     needle: DynamicImage,
     screen_width: usize,
-    screen_height: usize
+    screen_height: usize,
 }
 
 impl ImageCapture {
     pub fn new() -> ImageCapture {
         let display = Display::primary().expect("Couldn't find primary display.");
-        let mut capture = Capturer::new(display).expect("Couldn't begin capture.");
+        let capture = Capturer::new(display).expect("Couldn't begin capture.");
         let screen_width = capture.width();
         let screen_height = capture.height();
 
@@ -66,20 +41,61 @@ impl ImageCapture {
             screen: capture,
             needle: load_needle(),
             screen_width,
-            screen_height
+            screen_height,
+        }
+    }
+
+    fn find_needle(&self, haystack: &Vec<Rgba<u8>>, needle: &DynamicImage) -> Location {
+        let needle_width = needle.width();
+        let needle_height = needle.height();
+
+        println!(
+            "Haystack w/h {},{}  screen w/h {},{}",
+            needle_width, needle_height, self.screen_width, self.screen_height
+        );
+
+        for ox in 0..self.screen_width as u32 - needle_width {
+            'outer: for oy in needle_height..self.screen_height as u32 {
+                for ix in 0..needle_width {
+                    for iy in 0..needle_height {
+                        let pos = (ox + ix) + ((oy + iy) * self.screen_width as u32);
+
+                        if haystack.get(pos as usize).unwrap() != &needle.get_pixel(ix, iy) {
+                            continue 'outer;
+                        }
+
+                        println!(
+                            "Hay {:?} needle {:?}",
+                            haystack.get(pos as usize).unwrap(),
+                            &needle.get_pixel(ix, iy)
+                        );
+
+                        print!("{}||", pos);
+                    }
+                }
+
+                // Image matches
+                return Location {
+                    found: true,
+                    x: ox,
+                    y: oy,
+                };
+            }
+        }
+
+        Location {
+            found: false,
+            x: 0,
+            y: 0,
         }
     }
 
     pub fn load_test_image(&mut self) {
         let img = image::open("test/testimage.png").unwrap();
 
-        let now = Instant::now();
+        let haystack = self.take_screenshot();
 
-        self.take_screenshot();
-
-        println!("Screeny took {:?}", now.elapsed());
-
-        let image_loc = find_needle(&img, &self.needle);
+        let image_loc = self.find_needle(&haystack, &self.needle);
 
         if !image_loc.found {
             println!("Couldn't find image");
@@ -98,15 +114,12 @@ impl ImageCapture {
             }
         }
 
-        let game = board::board_from_array(board);
-
-        println!("{:?}", now.elapsed());
-
-        game.draw();
+        board::board_from_array(board);
     }
 
     pub fn take_screenshot(&mut self) -> Vec<Rgba<u8>> {
-        let mut bitflipped:Vec<Rgba<u8>> = Vec::with_capacity(self.screen_width * self.screen_height * 4);
+        let mut bitflipped: Vec<Rgba<u8>> =
+            Vec::with_capacity(self.screen_width * self.screen_height * 4);
 
         loop {
             let buffer = match self.screen.frame() {
@@ -124,20 +137,14 @@ impl ImageCapture {
 
             for y in 0..self.screen_height {
                 for x in 0..self.screen_width {
-                    let i = stride * y + 4 * x;
-                    bitflipped.push(Rgba([
-                        buffer[i],
-                        buffer[i + 1],
-                        buffer[i + 2],
-                        255,
-                    ]));
+                    let i = (stride * y) + (4 * x);
+                    bitflipped.push(Rgba([buffer[i + 2], buffer[i + 2], buffer[i], 255]));
                 }
             }
             return bitflipped;
         }
     }
 }
-
 
 fn get_piece_from_pixel(pixel: Rgba<u8>) -> Pieces {
     match pixel {
@@ -167,6 +174,6 @@ fn get_piece_from_pixel(pixel: Rgba<u8>) -> Pieces {
 
         CRAB_COLOUR => CRAB,
 
-        _ => NULL
+        _ => NULL,
     }
 }
