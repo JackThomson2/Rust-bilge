@@ -4,9 +4,6 @@ use colored::*;
 use defs::Pieces::*;
 
 use std::hash::{Hash, Hasher};
-use std::sync::Arc;
-
-use colored::*;
 
 use fasthash::MetroHasher;
 
@@ -17,11 +14,16 @@ pub struct HashEntry {
     depth: i8,
 }
 
+pub struct Move {
+    x: usize,
+    y: usize,
+}
+
 #[derive(Clone)]
 pub struct GameState {
-    board: [defs::Pieces; 72],
+    board: [[defs::Pieces; 6]; 12],
     water_level: usize,
-    to_clear: [bool; 72],
+    to_clear: [[bool; 6]; 12],
     something_cleared: bool,
 }
 
@@ -38,7 +40,7 @@ impl GameState {
         for y in (0..12).rev() {
             for x in 0..6 {
                 //print!("{}|", x + (y * 6));
-                let piece = self.board[x + (y * 6)];
+                let piece = self.board[x][y];
 
                 if y <= self.water_level {
                     print!("{}", defs::draw_piece(&piece).blue())
@@ -51,69 +53,70 @@ impl GameState {
     }
 
     fn remove_clears(&mut self) {
-        for i in 0..self.to_clear.len()  {
-            if self.to_clear[i] {
-                self.board[i] = defs::Pieces::CLEARED;
-                self.to_clear[i] = false;
+        for y in 0..12 {
+            for x in 0..6 {
+                if self.to_clear[x][y] {
+                    self.board[x][y] = CLEARED;
+                    self.to_clear[x][y] = false;
+                }
             }
         }
     }
 
     fn jelly(&mut self, clearing: defs::Pieces) {
-        for i in 0..self.board.len() {
-            if self.board[i] == clearing {
-                self.to_clear[i] = true
+        for y in 0..12 {
+            for x in 0..6 {
+                if self.board[x][y] == clearing {
+                    self.to_clear[x][y] = true
+                }
             }
         }
     }
 
-    fn puff(&mut self, pos: usize) {
-        let x = pos % 6;
-        let y = pos / 6 as usize;
-
+    fn puff(&mut self, x: usize, y: usize) {
         let up = y > 0;
         let down = y < 11;
         let right = x < 5;
         let left = x > 0;
 
-        self.to_clear[pos] = true;
+        self.to_clear[x][y] = true;
 
         if up {
-            self.to_clear[pos - 6] = true;
+            self.to_clear[x][y - 1] = true;
         }
         if down {
-            self.to_clear[pos + 6] = true;
+            self.to_clear[x][y + 1] = true;
         }
         if left {
-            self.to_clear[pos - 1] = true;
+            self.to_clear[x - 1][y] = true;
         }
         if right {
-            self.to_clear[pos + 1] = true;
+            self.to_clear[x + 1][y] = true;
         }
 
         if up && right {
-            self.to_clear[pos - 5] = true;
+            self.to_clear[x + 1][y - 1] = true;
         }
         if up && left {
-            self.to_clear[pos - 7] = true;
+            self.to_clear[x - 1][y - 1] = true;
         }
         if down && right {
-            self.to_clear[pos + 7] = true;
+            self.to_clear[x + 1][y + 1] = true;
         }
         if down && left {
-            self.to_clear[pos + 5] = true;
+            self.to_clear[x - 1][y + 1] = true;
         }
     }
 
-    fn swap(&mut self, pos: usize) -> i32 {
-        if pos % 5 == 0 {
+    fn swap(&mut self, pos: Move) -> i32 {
+        if pos.x == 5 {
             return -9001;
         }
 
         let mut score = 0;
 
-        let one = self.board[pos];
-        let two = self.board[pos + 1];
+        let one = self.board[pos.x][pos.y];
+        let two = self.board[pos.x + 1][pos.y];
 
         self.something_cleared = false;
 
@@ -125,9 +128,9 @@ impl GameState {
             return -9001;
         } else if one == PUFFERFISH || two == PUFFERFISH {
             if one == PUFFERFISH {
-                self.puff(pos);
+                self.puff(pos.x, pos.y);
             } else {
-                self.puff(pos + 1);
+                self.puff(pos.x + 1, pos.y);
             }
 
             self.remove_clears();
@@ -137,17 +140,19 @@ impl GameState {
             return -90001;
         } else if one == JELLYFISH || two == JELLYFISH {
             if one == JELLYFISH {
-                self.jelly(self.board[pos])
+                self.jelly(one);
             } else {
-                self.jelly(self.board[pos + 1])
+                self.jelly(two);
             }
 
             self.remove_clears();
             self.shift_everything();
             self.something_cleared = true
         } else {
-            self.board.swap(pos, pos + 1);
-            score = 10 * self.get_combo(pos);
+            self.board[pos.x][pos.y] = two;
+            self.board[pos.x + 1][pos.y] = one;
+
+            score = 10 * self.get_combo(pos.x, pos.y);
             if score > 0 {
                 self.something_cleared = true
             }
@@ -160,28 +165,26 @@ impl GameState {
         score
     }
 
-    pub fn get_moves(&self) -> Vec<usize> {
-        let mut moves = Vec::new();
+    pub fn get_moves(&self) -> Vec<Move> {
+        let mut moveVec: Vec<Move> = Vec::new();
 
-        for i in 0..self.board.len() {
-            if i % 5 == 0 {
-                continue;
-            }
+        for y in 0..12 {
+            for x in 0..5 {
+                if self.board[x][y] == CLEARED || self.board[x][y] == NULL {
+                    continue;
+                }
 
-            if self.board[i] == CLEARED || self.board[i] == NULL {
-                continue;
-            }
+                if self.board[x][y + 1] == CLEARED || self.board[x][y + 1] == NULL {
+                    continue;
+                }
 
-            if self.board[i + 1] == CLEARED || self.board[i + 1] == NULL {
-                continue;
-            }
-
-            if self.board[i] != self.board[i + 1] {
-                moves.push(i)
+                if self.board[x][y] != self.board[x][y + 1] {
+                    moveVec.push(Move { x, y })
+                }
             }
         }
 
-        return moves;
+        return moveVec;
     }
 
     pub fn clean_board(&mut self) {
@@ -194,42 +197,35 @@ impl GameState {
     fn mark_clears(&mut self) -> bool {
         let mut returning = false;
 
-        for i in 0..self.board.len() - 1 {
-            let x = i % 6;
-            let y = i / 6 as usize;
+        for y in 0..12 {
+            for x in 0..6 {
+                let piece = self.board[x][y];
 
-            let piece = self.board[i];
+                if y > self.water_level && piece == CRAB {
+                    self.to_clear[x][y] = true;
+                    returning = true;
+                    continue;
+                }
 
-            if y > self.water_level && piece == CRAB {
-                self.to_clear[i] = true;
-                returning = true;
-                continue;
-            }
+                if piece == PUFFERFISH || piece == CRAB || piece == JELLYFISH || piece == CLEARED {
+                    continue;
+                }
 
-            if piece == PUFFERFISH || piece == CRAB || piece == JELLYFISH || piece == CLEARED {
-                continue;
-            }
+                if x < 4 && piece == self.board[x + 1][y] && piece == self.board[x + 2][y] {
+                    self.to_clear[x][y] = true;
+                    self.to_clear[x + 1][y] = true;
+                    self.to_clear[x + 2][y] = true;
 
-            if x < 4 && piece == self.board[i + 1] && piece == self.board[i + 2] {
-                self.to_clear[i] = true;
-                self.to_clear[i + 1] = true;
-                self.to_clear[i + 2] = true;
+                    returning = true;
+                }
 
+                if y < 10 && piece == self.board[x][y + 1] && piece == self.board[x][y + 2] {
+                    self.to_clear[x][y] = true;
+                    self.to_clear[x][y + 1] = true;
+                    self.to_clear[x][y + 2] = true;
 
-                let x2 = (i + 1) % 6;
-                let x3 = (i + 2) % 6;
-
-                println!("We got a row at {},{},{} y: {}", x, x2, x3, y);
-
-                returning = true;
-            }
-
-            if y < 10 && piece == self.board[i + 6] && piece == self.board[i + 12] {
-                self.to_clear[i] = true;
-                self.to_clear[i + 6] = true;
-                self.to_clear[i + 12] = true;
-
-                returning = true;
+                    returning = true;
+                }
             }
         }
 
@@ -246,17 +242,14 @@ impl GameState {
 
     fn shift_everything(&mut self) {
         for x in 0..6 {
-            let mut last = 9999;
-            for y in (0..12).rev() {
-                let piece = self.board[x - (y * 6)];
-
-                if piece == CLEARED && last == 9999 {
+            let mut last = 99999;
+            for y in 0..12 {
+                if self.board[x][y] == CLEARED && last == 99999 {
                     last = y;
                 }
-
-                if last != 9999 && piece != CLEARED && piece != NULL {
-                    self.board[x + (last * 6)] = self.board[x + (y * 6)];
-                    self.board[x + (y * 6)] = CLEARED;
+                if last != 99999 && self.board[x][y] != CLEARED {
+                    self.board[last][y] = self.board[x][y];
+                    self.board[x][y] = CLEARED;
                     last += 1;
                 }
             }
@@ -268,8 +261,8 @@ impl GameState {
 
         for y in 0..(60 / 5) - 1 {
             for x in 0..5 {
-                let left_piece = self.board[x + (y * 6)];
-                let right_piece = self.board[x + (y * 6) + 1];
+                let left_piece = self.board[x][y];
+                let right_piece = self.board[x][y + 01];
 
                 if left_piece != CRAB
                     && left_piece != JELLYFISH
@@ -280,7 +273,7 @@ impl GameState {
                     && right_piece != PUFFERFISH
                     && right_piece != CLEARED
                 {
-                    let combo = self.get_combo(x + (y * 6));
+                    let combo = self.get_combo(x, y);
                     if combo > max {
                         max = combo
                     }
@@ -291,45 +284,42 @@ impl GameState {
         max
     }
 
-    fn get_combo(&self, pos: usize) -> i32 {
-        let x = pos % 6;
-        let y = pos / 6 as usize;
-
-        let left_piece = self.board[pos];
-        let right_piece = self.board[pos + 1];
+    fn get_combo(&self, x: usize, y: usize) -> i32 {
+        let left_piece = self.board[x][y];
+        let right_piece = self.board[x + 1][y];
 
         let mut left = 1; //left 3 pieces
         let mut l_col = 1; //left column of 5 pieces
         let mut right = 1; //right 3 pieces
         let mut r_col = 1; //left column of 5 pieces
 
-        if x > 1 && self.board[pos - 1] == left_piece && self.board[pos - 2] == left_piece {
+        if x > 1 && self.board[x - 1][y] == left_piece && self.board[x - 2][y] == left_piece {
             left = 3;
         }
-        if x < 3 && self.board[pos + 2] == right_piece && self.board[pos + 3] == right_piece {
+        if x < 3 && self.board[x + 2][y] == right_piece && self.board[x + 3][y] == right_piece {
             right = 3;
         }
-        if y > 0 && self.board[pos - 6] == left_piece {
+        if y > 0 && self.board[x][y - 1] == left_piece {
             l_col += 1;
-            if y > 1 && self.board[pos - 12] == left_piece {
+            if y > 1 && self.board[x][y - 2] == left_piece {
                 l_col += 1;
             }
         }
-        if y < 11 && self.board[y + 6] == left_piece {
+        if y < 11 && self.board[x][y + 1] == left_piece {
             l_col += 1;
-            if y < 10 && self.board[y + 12] == left_piece {
+            if y < 10 && self.board[x][y + 2] == left_piece {
                 l_col += 1;
             }
         }
-        if y > 0 && self.board[pos - 5] == right_piece {
+        if y > 0 && self.board[x + 1][y - 1] == right_piece {
             r_col += 1;
-            if y > 1 && self.board[y + 11] == right_piece {
+            if y > 1 && self.board[x + 1][y - 2] == right_piece {
                 r_col += 1;
             }
         }
-        if y < 11 && self.board[pos + 7] == right_piece {
+        if y < 11 && self.board[x + 1][y + 1] == right_piece {
             r_col += 1;
-            if y < 10 && self.board[pos + 13] == right_piece {
+            if y < 10 && self.board[x + 1][y + 2] == right_piece {
                 r_col += 1;
             }
         }
@@ -381,17 +371,19 @@ impl GameState {
 }
 
 pub fn generate_rand_board() -> GameState {
-    let mut board = [defs::Pieces::CLEARED; 72];
+    let mut board = [[defs::Pieces::CLEARED; 6]; 12];
     let mut rng = rand::thread_rng();
 
-    for i in board.iter_mut() {
-        *i = defs::piece_from_num(&rng.gen_range(1, 7))
+    for y in 0..12 {
+        for x in 0..6 {
+            board[x][y] = defs::piece_from_num(&rng.gen_range(1, 7))
+        }
     }
 
     GameState {
         water_level: 3,
         board,
-        to_clear: [false; 72],
+        to_clear: [[false; 6]; 12],
         something_cleared: false,
     }
 }
@@ -400,20 +392,20 @@ pub fn copy_board(copying: &GameState) -> GameState {
     copying.clone()
 }
 
-pub fn board_from_array(board: [defs::Pieces; 72]) -> GameState {
+pub fn board_from_array(board: [[defs::Pieces; 6]; 12]) -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: [false; 72],
-        something_cleared: false
+        to_clear: [[false; 6]; 12],
+        something_cleared: false,
     }
 }
 
 pub fn generate_game() -> GameState {
     GameState {
         water_level: 3,
-        board: [defs::Pieces::CLEARED; 72],
-        to_clear: [false; 72],
+        board: [[defs::Pieces::CLEARED; 6]; 12],
+        to_clear: [[false; 6]; 12],
         something_cleared: false,
     }
 }
