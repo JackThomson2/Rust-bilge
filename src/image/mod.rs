@@ -8,36 +8,68 @@ use board::defs::Pieces::*;
 
 use scrap::{Capturer, Display};
 
-use std::fs::File;
 use std::io::ErrorKind::WouldBlock;
 
-use repng;
-
-use png;
-
+use colored::*;
 use colours::*;
 
+type PixelArray = Vec<Vec<Pixel>>;
+
 struct Info {
-    buffer: Vec<u8>,
-    height: u32,
-    width: u32,
+    buffer: PixelArray,
+    height: usize,
+    width: usize,
 }
 
+#[inline]
 fn load_needle() -> Info {
-    let decoder = png::Decoder::new(File::open("test/TopLeft.png").unwrap());
-    let (info, mut reader) = decoder.read_info().unwrap();
+    let image = lodepng::decode32_file("test/TopLeft2.png").unwrap();
     // Allocate the output buffer.
-    let mut buffer = vec![0; info.buffer_size()];
-    // Read the next frame. Currently this function should only called once.
-    // The default options
-    reader.next_frame(&mut buffer).unwrap();
+    let buffer = image.buffer;
 
-    println!("info {:?}", info.color_type);
+    let height = image.height as usize;
+    let width = image.width as usize;
+    let mut pixels: Vec<Vec<Pixel>> = Vec::with_capacity(height);
+
+    let mut row: Vec<Pixel> = Vec::with_capacity(width);
+
+    for y in 0..height {
+        row.clear();
+        for x in 0..width {
+            let i = (width * y) + (x);
+            row.push(Pixel {
+                R: buffer[i].r,
+                G: buffer[i].g,
+                B: buffer[i].b,
+            });
+
+            print!(
+                "{}",
+                " ".on_true_color(buffer[i].r, buffer[i].g, buffer[i].b),
+            );
+        }
+        pixels.push(row.clone());
+        println!();
+    }
 
     Info {
-        buffer,
-        height: info.height,
-        width: info.width,
+        buffer: pixels,
+        height: image.height,
+        width: image.width,
+    }
+}
+
+#[derive(Copy, Clone, PartialEq)]
+pub struct Pixel {
+    R: u8,
+    G: u8,
+    B: u8,
+}
+
+impl Pixel {
+    #[inline]
+    pub fn is_equal(&self, other: &Pixel) -> bool {
+        self.R == other.R && self.G == other.G && self.B == other.B
     }
 }
 
@@ -55,6 +87,7 @@ pub struct ImageCapture {
 }
 
 impl ImageCapture {
+    #[inline]
     pub fn new() -> ImageCapture {
         let display = Display::primary().expect("Couldn't find primary display.");
         let capture = Capturer::new(display).expect("Couldn't begin capture.");
@@ -69,31 +102,38 @@ impl ImageCapture {
         }
     }
 
-    fn find_needle(&self, haystack: &Vec<u8>, needle: &Info) -> Location {
+    #[inline]
+    fn find_needle(&self, haystack: &PixelArray, needle: &Info) -> Location {
         let needle_width = needle.width as usize;
         let needle_height = needle.height as usize;
 
         println!(
-            "Haystack w/h {},{}  screen w/h {},{}",
-            needle_width, needle_height, self.screen_width, self.screen_height
+            "Haystack w/h {},{} size {}  screen w/h {},{} size {}",
+            needle_width,
+            needle_height,
+            needle.buffer.len(),
+            self.screen_width,
+            self.screen_height,
+            haystack.len()
         );
 
-        for ox in 0..self.screen_width - needle_width {
-            'outer: for oy in needle_height..self.screen_height {
-                for iy in 0..needle_height {
-                    let pos = ((ox) + ((oy + iy) * self.screen_width)) * 4;
-                    let needle_pos = (iy * needle_width) * 4;
+        let mut checked = 0;
 
-                    for cntr in 0..needle_width * 4 {
-                        if haystack[pos + cntr] != needle.buffer[needle_pos + cntr] {
+        for oy in 0..self.screen_height {
+            'outer: for ox in 0..self.screen_width {
+                for iy in 0..needle_height {
+                    for ix in 0..needle_width {
+                        let x_loc = ox + ix;
+                        let y_loc = oy + iy;
+
+                        checked += 1;
+                        if !haystack[y_loc][x_loc].is_equal(&needle.buffer[iy][ix]) {
                             continue 'outer;
                         }
                     }
-
-                    //println!("Matching r fou");
-                    //println!("{:?}, {:?}", screen_slice, needle_slice);
                 }
 
+                println!("Found a match at loc {},{}", oy, ox);
                 // Image matches
                 return Location {
                     found: true,
@@ -103,6 +143,8 @@ impl ImageCapture {
             }
         }
 
+        println!("Checked {} places", checked);
+
         Location {
             found: false,
             x: 0,
@@ -110,6 +152,7 @@ impl ImageCapture {
         }
     }
 
+    #[inline]
     pub fn load_test_image(&mut self) {
         let haystack = self.take_screenshot();
 
@@ -136,9 +179,9 @@ impl ImageCapture {
                 board::board_from_array(board); */
     }
 
-    pub fn take_screenshot(&mut self) -> Vec<u8> {
-        let mut bitflipped: Vec<u8> =
-            Vec::with_capacity(self.screen_width * self.screen_height * 4);
+    #[inline]
+    pub fn take_screenshot(&mut self) -> PixelArray {
+        let mut bitflipped: PixelArray = Vec::with_capacity(self.screen_height);
         loop {
             let buffer = match self.screen.frame() {
                 Ok(buffer) => buffer,
@@ -152,12 +195,24 @@ impl ImageCapture {
             };
 
             let stride = buffer.len() / self.screen_height;
+            let mut row: Vec<Pixel> = Vec::with_capacity(self.screen_width);
 
             for y in 0..self.screen_height {
+                row.clear();
                 for x in 0..self.screen_width {
                     let i = (stride * y) + (4 * x);
-                    bitflipped.extend_from_slice(&[buffer[i + 2], buffer[i + 1], buffer[i], 255]);
+                    row.push(Pixel {
+                        R: buffer[i + 2],
+                        G: buffer[i + 1],
+                        B: buffer[i],
+                    });
+                    /* print!(
+                        "{}",
+                        " ".on_true_color(buffer[i + 2], buffer[i + 1], buffer[i]),
+                    );*/
                 }
+                // println!();
+                bitflipped.push(row.clone());
             }
 
             return bitflipped;
@@ -165,7 +220,7 @@ impl ImageCapture {
     }
 }
 
-fn get_piece_from_pixel(pixel: Vec<u8>) -> Pieces {
+fn get_piece_from_pixel(pixel: &Vec<u8>) -> Pieces {
     let pixel_array: [u8; 4] = [
         pixel.get(0).unwrap().clone(),
         pixel.get(1).unwrap().clone(),
