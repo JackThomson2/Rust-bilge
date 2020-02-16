@@ -12,7 +12,12 @@ fn main() {
 
     searcher.load_test_image();
 
-    //println!("Best move is {}", board::search_board(game));
+    let mut game = board::generate_rand_board();
+    game.draw();
+    game.clean_board();
+    game.draw();
+
+    println!("Best Move {}", game.get_best_combo());
 
     println!("{:?}", now.elapsed());
 }
