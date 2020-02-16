@@ -11,7 +11,7 @@ fn main() {
 
     searcher.load_test_image();
 
-    let mut game = board::generate_rand_board();
+    let game = board::generate_rand_board();
     game.draw();
     let now = Instant::now();
     board::searcher::find_best_move(&game);

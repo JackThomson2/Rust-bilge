@@ -6,8 +6,6 @@ use defs::Pieces::*;
 
 use std::hash::{Hash, Hasher};
 
-use fasthash::MetroHasher;
-
 use rand::Rng;
 
 pub struct HashEntry {
@@ -243,9 +241,7 @@ impl GameState {
 
     #[inline]
     fn hash_me(&self) -> u64 {
-        let mut s = MetroHasher::default();
-        self.board.hash(&mut s);
-        s.finish()
+        2
     }
 
     #[inline]

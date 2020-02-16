@@ -3,8 +3,7 @@ use crate::board::{GameState, Move};
 pub fn find_best_move(board: &GameState) -> Move {
     println!("Finding best move");
 
-    let copy = board.clone();
-    let possible_moves = copy.get_moves();
+    let possible_moves = board.get_moves();
 
     println!("there are {} moves", possible_moves.len());
 
@@ -12,7 +11,7 @@ pub fn find_best_move(board: &GameState) -> Move {
     let mut best_move = *possible_moves.get(0).unwrap();
 
     for testing in possible_moves {
-        let mut test_board = copy.clone();
+        let mut test_board = board.clone();
 
         let new_score = test_board.swap(&testing);
 
