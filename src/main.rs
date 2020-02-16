@@ -1,4 +1,4 @@
-mod board;
+pub mod board;
 mod image;
 
 use std::time::Instant;
@@ -8,16 +8,14 @@ static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
     let mut searcher = image::ImageCapture::new();
-    let now = Instant::now();
 
     searcher.load_test_image();
 
     let mut game = board::generate_rand_board();
     game.draw();
-    game.clean_board();
+    let now = Instant::now();
+    board::searcher::find_best_move(&game);
+
+    println!("Finding best move took {:?}", now.elapsed());
     game.draw();
-
-    println!("Best Move {}", game.get_best_combo());
-
-    println!("{:?}", now.elapsed());
 }

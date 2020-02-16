@@ -1,4 +1,5 @@
 pub(crate) mod defs;
+pub mod searcher;
 
 use colored::*;
 use defs::Pieces::*;
@@ -14,6 +15,7 @@ pub struct HashEntry {
     depth: i8,
 }
 
+#[derive(Copy, Clone, Debug)]
 pub struct Move {
     x: usize,
     y: usize,
@@ -52,6 +54,7 @@ impl GameState {
         }
     }
 
+    #[inline]
     fn remove_clears(&mut self) {
         for y in 0..12 {
             for x in 0..6 {
@@ -63,16 +66,18 @@ impl GameState {
         }
     }
 
-    fn jelly(&mut self, clearing: defs::Pieces) {
+    #[inline]
+    fn jelly(&mut self, clearing: &defs::Pieces) {
         for y in 0..12 {
             for x in 0..6 {
-                if self.board[y][x] == clearing {
+                if &self.board[y][x] == clearing {
                     self.to_clear[y][x] = true
                 }
             }
         }
     }
 
+    #[inline]
     fn puff(&mut self, x: usize, y: usize) {
         let up = y > 0;
         let down = y < 11;
@@ -108,15 +113,16 @@ impl GameState {
         }
     }
 
-    fn swap(&mut self, pos: Move) -> i32 {
+    #[inline]
+    pub fn swap(&mut self, pos: &Move) -> i32 {
         if pos.x == 5 {
             return -9001;
         }
 
         let mut score = 0;
 
-        let one = self.board[pos.x][pos.y];
-        let two = self.board[pos.x + 1][pos.y];
+        let one = self.board[pos.y][pos.x];
+        let two = self.board[pos.y][pos.x + 1];
 
         self.something_cleared = false;
 
@@ -128,9 +134,9 @@ impl GameState {
             return -9001;
         } else if one == PUFFERFISH || two == PUFFERFISH {
             if one == PUFFERFISH {
-                self.puff(pos.x, pos.y);
+                self.puff(pos.y, pos.x);
             } else {
-                self.puff(pos.x + 1, pos.y);
+                self.puff(pos.y, pos.x + 1);
             }
 
             self.remove_clears();
@@ -140,19 +146,19 @@ impl GameState {
             return -90001;
         } else if one == JELLYFISH || two == JELLYFISH {
             if one == JELLYFISH {
-                self.jelly(one);
+                self.jelly(&one);
             } else {
-                self.jelly(two);
+                self.jelly(&two);
             }
 
             self.remove_clears();
             self.shift_everything();
             self.something_cleared = true
         } else {
-            self.board[pos.x][pos.y] = two;
-            self.board[pos.x + 1][pos.y] = one;
+            self.board[pos.y][pos.x] = two;
+            self.board[pos.y][pos.x + 1] = one;
 
-            score = 10 * self.get_combo(pos.x, pos.y);
+            score = 10 * self.get_combo(pos.y, pos.x);
             if score > 0 {
                 self.something_cleared = true
             }
@@ -165,6 +171,7 @@ impl GameState {
         score
     }
 
+    #[inline]
     pub fn get_moves(&self) -> Vec<Move> {
         let mut moveVec: Vec<Move> = Vec::new();
 
@@ -174,11 +181,11 @@ impl GameState {
                     continue;
                 }
 
-                if self.board[y + 1][x] == CLEARED || self.board[y + 1][x] == NULL {
+                if self.board[y][x + 1] == CLEARED || self.board[y][x + 1] == NULL {
                     continue;
                 }
 
-                if self.board[y][x] != self.board[y + 1][x] {
+                if self.board[y][x] != self.board[y][x + 1] {
                     moveVec.push(Move { x, y })
                 }
             }
@@ -187,6 +194,7 @@ impl GameState {
         return moveVec;
     }
 
+    #[inline]
     pub fn clean_board(&mut self) {
         while self.mark_clears() {
             self.remove_clears();
@@ -194,6 +202,7 @@ impl GameState {
         }
     }
 
+    #[inline]
     fn mark_clears(&mut self) -> bool {
         let mut returning = false;
 
@@ -229,17 +238,17 @@ impl GameState {
             }
         }
 
-        println!();
-
         returning
     }
 
+    #[inline]
     fn hash_me(&self) -> u64 {
         let mut s = MetroHasher::default();
         self.board.hash(&mut s);
         s.finish()
     }
 
+    #[inline]
     fn shift_everything(&mut self) {
         for x in 0..6 {
             let mut last = 99999;
@@ -256,6 +265,7 @@ impl GameState {
         }
     }
 
+    #[inline]
     pub fn get_best_combo(&self) -> i32 {
         let mut max = 0;
 
@@ -273,7 +283,7 @@ impl GameState {
                     && right_piece != PUFFERFISH
                     && right_piece != CLEARED
                 {
-                    let combo = self.get_combo(x, y);
+                    let combo = self.get_combo(y, x);
                     if combo > max {
                         max = combo
                     }
@@ -284,7 +294,8 @@ impl GameState {
         max
     }
 
-    fn get_combo(&self, x: usize, y: usize) -> i32 {
+    #[inline]
+    fn get_combo(&self, y: usize, x: usize) -> i32 {
         let left_piece = self.board[y][x];
         let right_piece = self.board[y][x + 1];
 
