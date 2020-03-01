@@ -7,14 +7,31 @@ edition = "2018"
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
+atomic-counter = "1"
 rand = "*"
 dashmap = "3.4"
 num_cpus = "1.1"
 colored = {git = "https://github.com/tforgione/colored"}
 scrap = "0.5.0"
 lodepng = "2.0.0"
+uvth = "*"
+fasthash = "0.4"
+aho-corasick = "0.7"
 mimalloc = { version = "*", default-features = false }
 
 [profile.release]
+opt-level = 3
 codegen-units = 1
 lto = true
+
+[profile.bench]
+opt-level = 3
+codegen-units = 1
+lto = true
+
+[dev-dependencies]
+criterion = "0.3"
+
+[[bench]]
+name = "image"
+harness = false

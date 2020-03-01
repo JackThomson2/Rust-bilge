@@ -23,7 +23,7 @@ struct Info {
 
 #[inline]
 fn load_needle() -> Info {
-    let image = lodepng::decode32_file("test/TopLeft2.png").unwrap();
+    let image = lodepng::decode32_file("test/TestBilg.png").unwrap();
     // Allocate the output buffer.
     let buffer = image.buffer;
 
@@ -37,16 +37,11 @@ fn load_needle() -> Info {
         row.clear();
         for x in 0..width {
             let i = (width * y) + (x);
-            row.push(Pixel {
-                R: buffer[i].r,
-                G: buffer[i].g,
-                B: buffer[i].b,
-            });
+            let pix = (buffer[i].r / 3) + (buffer[i].g / 3) + (buffer[i].b / 3);
 
-            print!(
-                "{}",
-                " ".on_true_color(buffer[i].r, buffer[i].g, buffer[i].b),
-            );
+            row.push(pix);
+
+            print!("{}", " ".on_true_color(pix, pix, pix),);
         }
         pixels.push(row.clone());
         println!();
@@ -54,24 +49,12 @@ fn load_needle() -> Info {
 
     Info {
         buffer: pixels,
-        height: image.height,
-        width: image.width,
+        height,
+        width,
     }
 }
 
-#[derive(Copy, Clone, PartialEq)]
-pub struct Pixel {
-    R: u8,
-    G: u8,
-    B: u8,
-}
-
-impl Pixel {
-    #[inline]
-    pub fn is_equal(&self, other: &Pixel) -> bool {
-        self.R == other.R && self.G == other.G && self.B == other.B
-    }
-}
+pub type Pixel = u8;
 
 struct Location {
     found: bool,
@@ -127,7 +110,7 @@ impl ImageCapture {
                         let y_loc = oy + iy;
 
                         checked += 1;
-                        if !haystack[y_loc][x_loc].is_equal(&needle.buffer[iy][ix]) {
+                        if haystack[y_loc][x_loc] != needle.buffer[iy][ix] {
                             continue 'outer;
                         }
                     }
@@ -197,21 +180,26 @@ impl ImageCapture {
             let stride = buffer.len() / self.screen_height;
             let mut row: Vec<Pixel> = Vec::with_capacity(self.screen_width);
 
+            let lowY = 400;
+            let highY = 450;
+
+            let lowX = 800;
+            let highX = 900;
+
             for y in 0..self.screen_height {
                 row.clear();
                 for x in 0..self.screen_width {
                     let i = (stride * y) + (4 * x);
-                    row.push(Pixel {
-                        R: buffer[i + 2],
-                        G: buffer[i + 1],
-                        B: buffer[i],
-                    });
-                    /* print!(
-                        "{}",
-                        " ".on_true_color(buffer[i + 2], buffer[i + 1], buffer[i]),
-                    );*/
+                    let pix: Pixel = (buffer[i + 2] / 3) + (buffer[i + 1] / 3) + (buffer[i] / 3);
+                    row.push(pix);
+
+                    if y > lowY && y < highY && x > lowX && x < highX {
+                        print!("{}", " ".on_true_color(pix, pix, pix),);
+                    }
                 }
-                // println!();
+                if y < highY + 1 && y > lowY - 1 {
+                    println!();
+                }
                 bitflipped.push(row.clone());
             }
 

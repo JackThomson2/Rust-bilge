@@ -7,9 +7,9 @@ use std::time::Instant;
 static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
-    let mut searcher = image::ImageCapture::new();
+    //let mut searcher = image::ImageCapture::new();
 
-    searcher.load_test_image();
+    //searcher.load_test_image();
 
     let game = board::generate_rand_board();
     game.draw();

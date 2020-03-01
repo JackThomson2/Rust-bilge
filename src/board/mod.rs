@@ -4,6 +4,7 @@ pub mod searcher;
 use colored::*;
 use defs::Pieces::*;
 
+use fasthash::MetroHasher;
 use std::hash::{Hash, Hasher};
 
 use rand::Rng;
@@ -24,13 +25,34 @@ pub struct GameState {
     board: [[defs::Pieces; 6]; 12],
     water_level: usize,
     to_clear: [[bool; 6]; 12],
-    something_cleared: bool,
+    pub something_cleared: bool,
 }
 
 #[derive(Debug, Copy, Clone)]
 pub struct SearchResult {
     move_id: usize,
     score: i16,
+}
+
+#[inline]
+pub fn int_to_move(move_num: usize) -> Move {
+    Move {
+        y: (move_num - 1) / 5,
+        x: (move_num - 1) % 5,
+    }
+}
+
+#[inline]
+pub fn int_to_mover(move_num: usize) -> Move {
+    Move {
+        y: (move_num) / 6,
+        x: (move_num) % 6,
+    }
+}
+
+#[inline]
+pub fn move_to_int(move_num: &Move) -> usize {
+    move_num.x + (move_num.y * defs::WIDTH as usize)
 }
 
 impl GameState {
@@ -240,8 +262,10 @@ impl GameState {
     }
 
     #[inline]
-    fn hash_me(&self) -> u64 {
-        2
+    pub fn hash_me(&self) -> u64 {
+        let mut s = MetroHasher::default();
+        self.board.hash(&mut s);
+        s.finish()
     }
 
     #[inline]
