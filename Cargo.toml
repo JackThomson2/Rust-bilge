@@ -27,7 +27,8 @@ lto = true
 [profile.bench]
 opt-level = 3
 codegen-units = 1
-lto = true
+panic = "abort"
+lto = "fat"
 
 [dev-dependencies]
 criterion = "0.3"
