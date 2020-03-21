@@ -82,7 +82,7 @@ fn dani_search(
 
 pub fn find_best_move(board: &GameState) -> Info {
     println!("Finding best move");
-    let depth = 11;
+    let depth = 9;
 
     let possible_moves = board.get_moves();
     let cntr = Arc::new(atomic_counter::RelaxedCounter::new(0));

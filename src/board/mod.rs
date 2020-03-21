@@ -60,8 +60,6 @@ pub fn move_to_int(move_num: &Move) -> usize {
     move_num.x + (move_num.y * defs::WIDTH as usize)
 }
 
-
-
 impl GameState {
     pub fn draw(&self) {
         for (loc, piece) in self.board.iter().enumerate() {
@@ -82,7 +80,9 @@ impl GameState {
 
     #[inline]
     fn remove_clears(&mut self) {
+        let board_size = &self.board.len();
         for loc in self.to_clear.iter() {
+            assert!(loc < board_size);
             self.board[*loc] = CLEARED
         };
         self.to_clear.clear();
@@ -100,10 +100,9 @@ impl GameState {
     #[inline]
     fn puff(&mut self, pos: usize) {
         let x = x_pos!(pos);
-        let y = y_pos!(pos);
 
-        let up = y > 0;
-        let down = y < 11;
+        let up = pos > 6;
+        let down = pos < 66;
         let right = x < 5;
         let left = x > 0;
 
@@ -138,9 +137,7 @@ impl GameState {
 
     #[inline]
     pub fn swap(&mut self, pos: usize) -> i32 {
-        let x = x_pos!(pos);
-
-        if x == 5 {
+        if x_pos!(pos) == 5 {
             return -9001;
         }
 
@@ -200,14 +197,17 @@ impl GameState {
     pub fn get_moves(&self) -> Vec<usize> {
         let mut move_vec: Vec<usize> = Vec::with_capacity(60);
 
-        for (pos, pce) in self.board.iter().enumerate() {
-            let pce = *pce;
+        for (pos, pieces) in self.board.iter().enumerate() {
             if x_pos!(pos) == 5 {continue;}
-            if pce == CLEARED || pce == NULL {
+
+            let left = *pieces;
+            if left == CLEARED || left == NULL {
                 continue;
             }
+
+            assert!(pos < self.board.len());
             let right = self.board[pos + 1];
-            if right == CLEARED || right == NULL || right == pce {
+            if right == CLEARED || right == NULL || right == left {
                 continue;
             }
             move_vec.push(pos);
@@ -233,6 +233,8 @@ impl GameState {
             let x = x_pos!(pos);
             let y = y_pos!(pos);
 
+            let board_size = self.board.len();
+
             if y > self.water_level && piece == CRAB {
                 self.to_clear.push(pos);
                 returning = true;
@@ -243,7 +245,7 @@ impl GameState {
                 continue;
             }
 
-            if x < 4 && piece == self.board[pos + 1] && piece == self.board[pos + 2] {
+            if x < 4 && pos < board_size - 2 && piece == self.board[pos + 1] && piece == self.board[pos + 2] {
                 self.to_clear.push(pos);
                 self.to_clear.push(pos + 1);
                 self.to_clear.push(pos + 2);
@@ -251,7 +253,7 @@ impl GameState {
                 returning = true;
             }
 
-            if y < 10 && piece == self.board[pos + 6] && piece == self.board[pos + 12] {
+            if pos < board_size - 12 && piece == self.board[pos + 6] && piece == self.board[pos + 12] {
                 self.to_clear.push(pos);
                 self.to_clear.push(pos + 6);
                 self.to_clear.push(pos + 12);
@@ -272,14 +274,17 @@ impl GameState {
 
     #[inline]
     fn shift_everything(&mut self) {
+        let size = self.board.len();
         for x in 0..6 {
             let mut last = 99999;
             for y in 0..12 {
                 let pos = (y * 6) + x;
+                assert!(pos < size);
 
                 if self.board[pos] == CLEARED && last == 99999 {
                     last = y;
                 }
+
                 if last != 99999 && self.board[pos] != CLEARED {
                     let last_pos = (last * 6) + x;
                     self.board[last_pos] = self.board[pos];
@@ -293,12 +298,13 @@ impl GameState {
     #[inline]
     pub fn get_best_combo(&self) -> i32 {
         let mut max = 0;
+        let size = self.board.len();
 
         for y in 0..(60 / 5) - 1 {
             for x in 0..5 {
                 let pos = (y * 6) + x;
 
-                assert!(pos < 72);
+                assert!(pos < size - 1);
 
                 let left_piece = self.board[pos];
                 let right_piece = self.board[pos + 1];
@@ -319,6 +325,8 @@ impl GameState {
 
     #[inline]
     fn get_combo(&self, pos: usize) -> i32 {
+        assert!(pos + 1 < self.board.len());
+
         let x = x_pos!(pos);
         let y = y_pos!(pos);
 
@@ -330,7 +338,7 @@ impl GameState {
         let mut right = 1; //right 3 pieces
         let mut r_col = 1; //left column of 5 pieces
 
-        if x > 1 && self.board[pos - 1] == left_piece && self.board[pos - 2] == left_piece {
+        if pos > 2 && self.board[pos - 1] == left_piece && self.board[pos - 2] == left_piece {
             left = 3;
         }
         if x < 3 && self.board[pos + 2] == right_piece && self.board[pos + 3] == right_piece {
