@@ -12,7 +12,7 @@ use fasthash::MetroHasher;
 use std::hash::{Hash, Hasher};
 
 use rand::Rng;
-use arrayvec::{ArrayVec, Array};
+use arrayvec::{ArrayVec};
 
 pub struct HashEntry {
     search_res: SearchResult,
@@ -413,15 +413,15 @@ pub fn generate_rand_board() -> GameState {
     let mut last: Option<Pieces> = None;
     for x in board.iter_mut() {
         if let Some(pce) = last {
-            let mut to_use = defs::piece_from_num(&rng.gen_range(1, 7));
+            let mut to_use = defs::piece_from_num(rng.gen_range(1, 7));
             while  to_use == pce {
-                to_use = defs::piece_from_num(&rng.gen_range(1, 7));
+                to_use = defs::piece_from_num(rng.gen_range(1, 7));
             }
             last = Some(to_use);
             *x = to_use;
             continue;
         }
-        *x = defs::piece_from_num(&rng.gen_range(1, 7));
+        *x = defs::piece_from_num(rng.gen_range(1, 7));
         last = Some(*x);
     }
 

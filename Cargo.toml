@@ -21,13 +21,12 @@ snmalloc-rs = "0.2"
 arrayvec = "0.5"
 
 [profile.release]
-debug = true
+panic = "abort"
 opt-level = 3
 codegen-units = 1
-lto = true
+lto = "fat"
 
 [profile.bench]
-debug = true
 opt-level = 3
 codegen-units = 1
 lto = "fat"

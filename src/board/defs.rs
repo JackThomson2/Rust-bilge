@@ -17,7 +17,7 @@ pub enum Pieces {
     NULL = 255,
 }
 
-pub fn piece_from_num(val: &i16) -> Pieces {
+pub fn piece_from_num(val: i16) -> Pieces {
     match val {
         0 => Pieces::CLEARED,
         1 => Pieces::BluePentagon,

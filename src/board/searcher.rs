@@ -1,10 +1,10 @@
-use crate::board::{int_to_move, int_to_mover, move_to_int, GameState, Move};
+use crate::board::GameState;
 use std::collections::HashSet;
 
 use atomic_counter;
 use atomic_counter::AtomicCounter;
 use rand::prelude::*;
-use std::sync::{Arc, Mutex};
+use std::sync::{Arc};
 use std::{cmp, thread::spawn};
 
 #[derive(Debug)]
