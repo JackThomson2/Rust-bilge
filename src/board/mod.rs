@@ -5,13 +5,13 @@ mod helpers;
 
 use helpers::can_move;
 use colored::*;
-use defs::Pieces::*;
+use defs::Pieces::{self, *};
 
 use fasthash::MetroHasher;
 use std::hash::{Hash, Hasher};
 
 use rand::Rng;
-use std::collections::VecDeque;
+use arrayvec::{ArrayVec, Array};
 
 pub struct HashEntry {
     search_res: SearchResult,
@@ -28,7 +28,7 @@ pub struct Move {
 pub struct GameState {
     board: [[defs::Pieces; 6]; 12],
     water_level: usize,
-    to_clear: Vec<Move>,
+    to_clear: ArrayVec<[Move; 72]>,
     pub something_cleared: bool,
 }
 
@@ -80,7 +80,9 @@ impl GameState {
 
     #[inline]
     fn remove_clears(&mut self) {
-        self.to_clear.for_each(|moving| self.board[moving.y][moving.x] = CLEARED);
+        for moving in self.to_clear.iter() {
+            self.board[moving.y][moving.x] = CLEARED;
+        }
         self.to_clear.clear();
     }
 
@@ -406,7 +408,7 @@ pub fn generate_rand_board() -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: Vec::new(),
+        to_clear: ArrayVec::new(),
         something_cleared: false,
     }
 }
@@ -419,7 +421,7 @@ pub fn board_from_array(board: [[defs::Pieces; 6]; 12]) -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: Vec::new(),
+        to_clear: ArrayVec::new(),
         something_cleared: false,
     }
 }
@@ -428,7 +430,7 @@ pub fn generate_game() -> GameState {
     GameState {
         water_level: 3,
         board: [[defs::Pieces::CLEARED; 6]; 12],
-        to_clear: Vec::new(),
+        to_clear: ArrayVec::new(),
         something_cleared: false,
     }
 }

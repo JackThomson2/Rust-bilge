@@ -47,7 +47,6 @@ pub fn draw_piece(piece: &Pieces) -> &str {
         Pieces::CRAB => "H",
         Pieces::PUFFERFISH => "I",
         Pieces::JELLYFISH => "J",
-        Pieces::NULL => " ",
-        _ => " ",
+        Pieces::NULL => " "
     }
 }
