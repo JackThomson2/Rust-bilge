@@ -17,12 +17,13 @@ lodepng = "2.0.0"
 uvth = "*"
 fasthash = "0.4"
 aho-corasick = "0.7"
-mimalloc = { version = "*", default-features = false }
+snmalloc-rs = "0.2"
 arrayvec = "0.5"
 
 [profile.release]
 opt-level = 3
 codegen-units = 1
+panic = "abort"
 lto = true
 
 [profile.bench]

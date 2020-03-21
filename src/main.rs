@@ -4,7 +4,7 @@ pub mod image;
 use std::time::Instant;
 
 #[global_allocator]
-static GLOBAL: mimalloc::MiMalloc = mimalloc::MiMalloc;
+static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
 
 fn main() {
     //let mut searcher = image::ImageCapture::new();
