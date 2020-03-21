@@ -102,7 +102,7 @@ pub fn find_best_move(board: &GameState) -> Info {
 
         children.push(spawn(move || {
             dani_search(
-                &test_board,
+                &test_board.clone(),
                 depth,
                 testing,
                 &mut HashSet::new(),

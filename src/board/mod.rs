@@ -325,49 +325,52 @@ impl GameState {
 
     #[inline]
     fn get_combo(&self, pos: usize) -> i32 {
-        assert!(pos + 1 < self.board.len());
-
         let x = x_pos!(pos);
         let y = y_pos!(pos);
 
-        let left_piece = self.board[pos];
-        let right_piece = self.board[pos + 1];
+        let left_piece = unsafe {self.board.get_unchecked(pos)} ;
+        let right_piece = unsafe {self.board.get_unchecked(pos + 1)} ;
 
         let mut left = 1; //left 3 pieces
         let mut l_col = 1; //left column of 5 pieces
         let mut right = 1; //right 3 pieces
         let mut r_col = 1; //left column of 5 pieces
 
-        if pos > 2 && self.board[pos - 1] == left_piece && self.board[pos - 2] == left_piece {
-            left = 3;
-        }
-        if x < 3 && self.board[pos + 2] == right_piece && self.board[pos + 3] == right_piece {
-            right = 3;
-        }
-        if y > 0 && self.board[pos - 6] == left_piece {
-            l_col += 1;
-            if y > 1 && self.board[pos - 12] == left_piece {
+        unsafe {
+            if pos > 2 && self.board.get_unchecked(pos - 1) == left_piece &&
+                self.board.get_unchecked(pos - 2) == left_piece {
+                left = 3;
+            }
+            if x < 3 && self.board.get_unchecked(pos + 2) == right_piece
+                && self.board.get_unchecked(pos + 3) == right_piece {
+                right = 3;
+            }
+            if y > 0 && self.board.get_unchecked(pos - 6) == left_piece {
                 l_col += 1;
+                if y > 1 && self.board.get_unchecked(pos - 12) == left_piece {
+                    l_col += 1;
+                }
             }
-        }
-        if y < 11 && self.board[pos + 6] == left_piece {
-            l_col += 1;
-            if y < 10 && self.board[pos + 12] == left_piece {
+            if y < 11 && self.board.get_unchecked(pos + 6) == left_piece {
                 l_col += 1;
+                if y < 10 &&  self.board.get_unchecked(pos + 12) == left_piece {
+                    l_col += 1;
+                }
             }
-        }
-        if y > 0 && self.board[pos - 5] == right_piece {
-            r_col += 1;
-            if y > 1 && self.board[pos - 11] == right_piece {
+            if y > 0 && self.board.get_unchecked(pos - 5) == right_piece {
                 r_col += 1;
+                if y > 1 && self.board.get_unchecked(pos - 11) == right_piece {
+                    r_col += 1;
+                }
             }
-        }
-        if y < 11 && self.board[pos + 7] == right_piece {
-            r_col += 1;
-            if y < 10 && self.board[pos + 13] == right_piece {
+            if y < 11 && self.board.get_unchecked(pos + 7) == right_piece {
                 r_col += 1;
+                if y < 10 && self.board.get_unchecked(pos + 13) == right_piece {
+                    r_col += 1;
+                }
             }
         }
+
         if r_col < 3 {
             r_col = 1;
         }
