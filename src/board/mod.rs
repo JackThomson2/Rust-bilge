@@ -326,7 +326,6 @@ impl GameState {
     #[inline]
     fn get_combo(&self, pos: usize) -> i32 {
         let x = x_pos!(pos);
-        let y = y_pos!(pos);
 
         let left_piece = unsafe {self.board.get_unchecked(pos)} ;
         let right_piece = unsafe {self.board.get_unchecked(pos + 1)} ;
@@ -345,27 +344,27 @@ impl GameState {
                 && self.board.get_unchecked(pos + 3) == right_piece {
                 right = 3;
             }
-            if y > 0 && self.board.get_unchecked(pos - 6) == left_piece {
+            if pos > 5 && self.board.get_unchecked(pos - 6) == left_piece {
                 l_col += 1;
-                if y > 1 && self.board.get_unchecked(pos - 12) == left_piece {
+                if pos > 11 && self.board.get_unchecked(pos - 12) == left_piece {
                     l_col += 1;
                 }
             }
-            if y < 11 && self.board.get_unchecked(pos + 6) == left_piece {
+            if pos < 66 && self.board.get_unchecked(pos + 6) == left_piece {
                 l_col += 1;
-                if y < 10 &&  self.board.get_unchecked(pos + 12) == left_piece {
+                if pos < 60 &&  self.board.get_unchecked(pos + 12) == left_piece {
                     l_col += 1;
                 }
             }
-            if y > 0 && self.board.get_unchecked(pos - 5) == right_piece {
+            if pos > 4 && self.board.get_unchecked(pos - 5) == right_piece {
                 r_col += 1;
-                if y > 1 && self.board.get_unchecked(pos - 11) == right_piece {
+                if pos > 10 && self.board.get_unchecked(pos - 11) == right_piece {
                     r_col += 1;
                 }
             }
-            if y < 11 && self.board.get_unchecked(pos + 7) == right_piece {
+            if pos < 65 && self.board.get_unchecked(pos + 7) == right_piece {
                 r_col += 1;
-                if y < 10 && self.board.get_unchecked(pos + 13) == right_piece {
+                if pos < 59 && self.board.get_unchecked(pos + 13) == right_piece {
                     r_col += 1;
                 }
             }

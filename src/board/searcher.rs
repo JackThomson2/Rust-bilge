@@ -19,7 +19,6 @@ fn dani_search(
     depth: u8,
     move_number: usize,
     moves: &mut HashSet<usize>,
-    rng: &mut ThreadRng,
     cntr: &atomic_counter::RelaxedCounter,
 ) -> Info {
     let mut max_score = 0i32;
@@ -67,10 +66,10 @@ fn dani_search(
         };
     }
 
-    let offset = rng.gen_range(0, 15);
+    let offset = 6;
 
     for i in 1 + offset..=40 + offset {
-        let score = dani_search(&copy, depth - 1, i, moves, rng, cntr).score;
+        let score = dani_search(&copy, depth - 1, 72 - i, moves, cntr).score;
         max_score = cmp::max(score, max_score);
     }
 
@@ -106,7 +105,6 @@ pub fn find_best_move(board: &GameState) -> Info {
                 depth,
                 testing,
                 &mut HashSet::new(),
-                &mut rand::thread_rng(),
                 &cnt,
             )
         }));
