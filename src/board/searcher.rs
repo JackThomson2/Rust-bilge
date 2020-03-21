@@ -92,10 +92,10 @@ pub fn find_best_move(board: &GameState) -> Info {
 
     let mut best_scoring = Info {
         score: std::i32::MIN,
-        turn: int_to_move(0),
+        turn: int_to_mover(0),
     };
 
-    let mut children = vec![];
+    let mut children = Vec::with_capacity(possible_moves.len());
 
     for testing in possible_moves {
         let test_board = board.clone();
