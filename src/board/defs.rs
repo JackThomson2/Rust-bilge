@@ -1,6 +1,7 @@
 pub const WIDTH: i16 = 6;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
+#[repr(u8)]
 pub enum Pieces {
     CLEARED = 0,
     BluePentagon = 1,
@@ -13,7 +14,7 @@ pub enum Pieces {
     CRAB = 8,
     PUFFERFISH = 9,
     JELLYFISH = 10,
-    NULL = 999,
+    NULL = 255,
 }
 
 pub fn piece_from_num(val: &i16) -> Pieces {

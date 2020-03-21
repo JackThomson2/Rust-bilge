@@ -17,12 +17,12 @@ pub struct Info {
 fn dani_search(
     board: &GameState,
     depth: u8,
-    move_numer: usize,
+    move_number: usize,
     moves: &mut HashSet<usize>,
     rng: &mut ThreadRng,
     cntr: &atomic_counter::RelaxedCounter,
 ) -> Info {
-    let move_num = int_to_mover(move_numer);
+    let move_num = int_to_mover(move_number);
     let mut max_score = 0i32;
     let mut copy = board.clone();
     cntr.inc();
@@ -31,7 +31,7 @@ fn dani_search(
 
     if score < 0 {
         return Info {
-            turn: move_num.clone(),
+            turn: move_num,
             score,
         };
     }
@@ -39,23 +39,23 @@ fn dani_search(
     if !copy.something_cleared {
         if moves.len() >= 5 {
             return Info {
-                turn: move_num.clone(),
+                turn: move_num,
                 score,
             };
         };
 
-        if moves.len() > 0 {
+        if moves.is_empty() {
             for i in moves.iter() {
-                if i >= &move_numer {
+                if i >= &move_number {
                     return Info {
-                        turn: move_num.clone(),
+                        turn: move_num,
                         score,
                     };
                 }
             }
         }
 
-        moves.insert(move_numer);
+        moves.insert(move_number);
     } else {
         moves.clear();
     }
@@ -63,7 +63,7 @@ fn dani_search(
     if depth == 1 {
         let scorz = 10 * copy.get_best_combo();
         return Info {
-            turn: move_num.clone(),
+            turn: move_num,
             score: score + scorz,
         };
     }
@@ -76,7 +76,7 @@ fn dani_search(
     }
 
     Info {
-        turn: move_num.clone(),
+        turn: move_num,
         score: (score as f32 + (max_score as f32) * 0.9) as i32,
     }
 }

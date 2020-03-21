@@ -1,5 +1,5 @@
 pub mod board;
-mod image;
+pub mod image;
 
 use std::time::Instant;
 

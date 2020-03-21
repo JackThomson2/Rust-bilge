@@ -1,6 +1,9 @@
-pub(crate) mod defs;
+pub mod defs;
 pub mod searcher;
 
+mod helpers;
+
+use helpers::can_move;
 use colored::*;
 use defs::Pieces::*;
 
@@ -87,10 +90,10 @@ impl GameState {
     }
 
     #[inline]
-    fn jelly(&mut self, clearing: &defs::Pieces) {
+    fn jelly(&mut self, clearing: defs::Pieces) {
         for y in 0..12 {
             for x in 0..6 {
-                if &self.board[y][x] == clearing {
+                if self.board[y][x] == clearing {
                     self.to_clear[y][x] = true
                 }
             }
@@ -166,9 +169,9 @@ impl GameState {
             return -90001;
         } else if one == JELLYFISH || two == JELLYFISH {
             if one == JELLYFISH {
-                self.jelly(&one);
+                self.jelly(one);
             } else {
-                self.jelly(&two);
+                self.jelly(two);
             }
 
             self.remove_clears();
@@ -193,7 +196,7 @@ impl GameState {
 
     #[inline]
     pub fn get_moves(&self) -> Vec<Move> {
-        let mut moveVec: Vec<Move> = Vec::new();
+        let mut move_vec: Vec<Move> = Vec::with_capacity(60);
 
         for y in 0..12 {
             for x in 0..5 {
@@ -206,12 +209,12 @@ impl GameState {
                 }
 
                 if self.board[y][x] != self.board[y][x + 1] {
-                    moveVec.push(Move { x, y })
+                    move_vec.push(Move { x, y })
                 }
             }
         }
 
-        return moveVec;
+        return move_vec;
     }
 
     #[inline]
@@ -236,7 +239,7 @@ impl GameState {
                     continue;
                 }
 
-                if piece == PUFFERFISH || piece == CRAB || piece == JELLYFISH || piece == CLEARED {
+                if !can_move(piece) {
                     continue;
                 }
 
@@ -294,14 +297,7 @@ impl GameState {
                 let left_piece = self.board[y][x];
                 let right_piece = self.board[y][x + 1];
 
-                if left_piece != CRAB
-                    && left_piece != JELLYFISH
-                    && left_piece != PUFFERFISH
-                    && left_piece != CLEARED
-                    && right_piece != CRAB
-                    && right_piece != JELLYFISH
-                    && right_piece != PUFFERFISH
-                    && right_piece != CLEARED
+                if left_piece != right_piece && can_move(left_piece) && can_move(right_piece)
                 {
                     let combo = self.get_combo(y, x);
                     if combo > max {
@@ -405,9 +401,9 @@ pub fn generate_rand_board() -> GameState {
     let mut board = [[defs::Pieces::CLEARED; 6]; 12];
     let mut rng = rand::thread_rng();
 
-    for y in 0..12 {
-        for x in 0..6 {
-            board[y][x] = defs::piece_from_num(&rng.gen_range(1, 7))
+    for y in &mut board {
+        for x in y.iter_mut()  {
+            *x = defs::piece_from_num(&rng.gen_range(1, 7));
         }
     }
 

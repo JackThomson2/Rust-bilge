@@ -1,10 +1,6 @@
 mod colours;
 
-#[path = "../board/mod.rs"]
-mod board;
-
-use board::defs::Pieces;
-use board::defs::Pieces::*;
+use crate::board::defs::Pieces::{self, *};
 
 use scrap::{Capturer, Display};
 
@@ -67,6 +63,12 @@ pub struct ImageCapture {
     needle: Info,
     screen_width: usize,
     screen_height: usize,
+}
+
+impl Default for ImageCapture {
+    fn default() -> Self {
+        Self::new()
+    }
 }
 
 impl ImageCapture {
@@ -180,11 +182,11 @@ impl ImageCapture {
             let stride = buffer.len() / self.screen_height;
             let mut row: Vec<Pixel> = Vec::with_capacity(self.screen_width);
 
-            let lowY = 400;
-            let highY = 450;
+            let low_y = 400;
+            let high_y = 450;
 
-            let lowX = 800;
-            let highX = 900;
+            let low_x = 800;
+            let high_x = 900;
 
             for y in 0..self.screen_height {
                 row.clear();
@@ -193,11 +195,11 @@ impl ImageCapture {
                     let pix: Pixel = (buffer[i + 2] / 3) + (buffer[i + 1] / 3) + (buffer[i] / 3);
                     row.push(pix);
 
-                    if y > lowY && y < highY && x > lowX && x < highX {
+                    if y > low_y && y < high_y && x > low_x && x < high_x {
                         print!("{}", " ".on_true_color(pix, pix, pix),);
                     }
                 }
-                if y < highY + 1 && y > lowY - 1 {
+                if y < high_y + 1 && y > low_y - 1 {
                     println!();
                 }
                 bitflipped.push(row.clone());
@@ -208,12 +210,12 @@ impl ImageCapture {
     }
 }
 
-fn get_piece_from_pixel(pixel: &Vec<u8>) -> Pieces {
+fn get_piece_from_pixel(pixel: &[u8]) -> Pieces {
     let pixel_array: [u8; 4] = [
-        pixel.get(0).unwrap().clone(),
-        pixel.get(1).unwrap().clone(),
-        pixel.get(2).unwrap().clone(),
-        pixel.get(3).unwrap().clone(),
+        *pixel.get(0).unwrap(),
+        *pixel.get(1).unwrap(),
+        *pixel.get(2).unwrap(),
+        *pixel.get(3).unwrap(),
     ];
 
     match pixel_array {
