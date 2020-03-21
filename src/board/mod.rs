@@ -11,6 +11,7 @@ use fasthash::MetroHasher;
 use std::hash::{Hash, Hasher};
 
 use rand::Rng;
+use std::collections::VecDeque;
 
 pub struct HashEntry {
     search_res: SearchResult,
@@ -27,7 +28,7 @@ pub struct Move {
 pub struct GameState {
     board: [[defs::Pieces; 6]; 12],
     water_level: usize,
-    to_clear: [[bool; 6]; 12],
+    to_clear: Vec<Move>,
     pub something_cleared: bool,
 }
 
@@ -79,14 +80,8 @@ impl GameState {
 
     #[inline]
     fn remove_clears(&mut self) {
-        for y in 0..12 {
-            for x in 0..6 {
-                if self.to_clear[y][x] {
-                    self.board[y][x] = CLEARED;
-                    self.to_clear[y][x] = false;
-                }
-            }
-        }
+        self.to_clear.for_each(|moving| self.board[moving.y][moving.x] = CLEARED);
+        self.to_clear.clear();
     }
 
     #[inline]
@@ -94,7 +89,7 @@ impl GameState {
         for y in 0..12 {
             for x in 0..6 {
                 if self.board[y][x] == clearing {
-                    self.to_clear[y][x] = true
+                    self.to_clear.push(Move{x, y});
                 }
             }
         }
@@ -107,32 +102,33 @@ impl GameState {
         let right = x < 5;
         let left = x > 0;
 
-        self.to_clear[y][x] = true;
+
+        self.to_clear.push(Move{x, y});
 
         if up {
-            self.to_clear[y - 1][x] = true;
+            self.to_clear.push(Move{x, y: y - 1});
         }
         if down {
-            self.to_clear[y + 1][x] = true;
+            self.to_clear.push(Move{x, y: y + 1});
         }
         if left {
-            self.to_clear[y][x - 1] = true;
+            self.to_clear.push(Move{x: x - 1, y});
         }
         if right {
-            self.to_clear[y][x + 1] = true;
+            self.to_clear.push(Move{x: x + 1, y});
         }
 
         if up && right {
-            self.to_clear[y - 1][x + 1] = true;
+            self.to_clear.push(Move{x: x + 1, y: y - 1});
         }
         if up && left {
-            self.to_clear[y - 1][x - 1] = true;
+            self.to_clear.push(Move{x: x - 1, y: y - 1});
         }
         if down && right {
-            self.to_clear[y + 1][x + 1] = true;
+            self.to_clear.push(Move{x: x + 1, y: y + 1});
         }
         if down && left {
-            self.to_clear[y + 1][x - 1] = true;
+            self.to_clear.push(Move{x: x - 1, y: y + 1});
         }
     }
 
@@ -234,7 +230,7 @@ impl GameState {
                 let piece = self.board[y][x];
 
                 if y > self.water_level && piece == CRAB {
-                    self.to_clear[y][x] = true;
+                    self.to_clear.push(Move{x, y});
                     returning = true;
                     continue;
                 }
@@ -244,17 +240,17 @@ impl GameState {
                 }
 
                 if x < 4 && piece == self.board[y][x + 1] && piece == self.board[y][x + 2] {
-                    self.to_clear[y][x] = true;
-                    self.to_clear[y][x + 1] = true;
-                    self.to_clear[y][x + 2] = true;
+                    self.to_clear.push(Move{x, y});
+                    self.to_clear.push(Move{x: x + 1, y});
+                    self.to_clear.push(Move{x: x + 2, y});
 
                     returning = true;
                 }
 
                 if y < 10 && piece == self.board[y + 1][x] && piece == self.board[y + 2][x] {
-                    self.to_clear[y][x] = true;
-                    self.to_clear[y + 1][x] = true;
-                    self.to_clear[y + 2][x] = true;
+                    self.to_clear.push(Move{x, y});
+                    self.to_clear.push(Move{x, y: y + 1});
+                    self.to_clear.push(Move{x, y: y + 2});
 
                     returning = true;
                 }
@@ -410,7 +406,7 @@ pub fn generate_rand_board() -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: [[false; 6]; 12],
+        to_clear: Vec::new(),
         something_cleared: false,
     }
 }
@@ -423,7 +419,7 @@ pub fn board_from_array(board: [[defs::Pieces; 6]; 12]) -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: [[false; 6]; 12],
+        to_clear: Vec::new(),
         something_cleared: false,
     }
 }
@@ -432,7 +428,7 @@ pub fn generate_game() -> GameState {
     GameState {
         water_level: 3,
         board: [[defs::Pieces::CLEARED; 6]; 12],
-        to_clear: [[false; 6]; 12],
+        to_clear: Vec::new(),
         something_cleared: false,
     }
 }
