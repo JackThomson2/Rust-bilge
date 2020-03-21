@@ -3,7 +3,6 @@ use std::collections::HashSet;
 
 use atomic_counter;
 use atomic_counter::AtomicCounter;
-use rand::prelude::*;
 use std::sync::{Arc};
 use std::{cmp, thread::spawn};
 
@@ -68,7 +67,7 @@ fn dani_search(
 
     let offset = 6;
 
-    for i in 1 + offset..=40 + offset {
+    for i in 1..=47 {
         let score = dani_search(&copy, depth - 1, 72 - i, moves, cntr).score;
         max_score = cmp::max(score, max_score);
     }
@@ -81,7 +80,7 @@ fn dani_search(
 
 pub fn find_best_move(board: &GameState) -> Info {
     println!("Finding best move");
-    let depth = 9;
+    let depth = 11;
 
     let possible_moves = board.get_moves();
     let cntr = Arc::new(atomic_counter::RelaxedCounter::new(0));
