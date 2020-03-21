@@ -201,12 +201,13 @@ impl GameState {
         let mut move_vec: Vec<usize> = Vec::with_capacity(60);
 
         for (pos, pce) in self.board.iter().enumerate() {
+            let pce = *pce;
             if x_pos!(pos) == 5 {continue;}
-            if pce == &CLEARED || pce == &NULL {
+            if pce == CLEARED || pce == NULL {
                 continue;
             }
             let right = self.board[pos + 1];
-            if right == CLEARED || right == NULL || &right == pce {
+            if right == CLEARED || right == NULL || right == pce {
                 continue;
             }
             move_vec.push(pos);
