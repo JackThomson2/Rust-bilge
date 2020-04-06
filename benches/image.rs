@@ -129,11 +129,11 @@ fn criterion_benchmark(c: &mut Criterion) {
 
     find_needle(&haystack, &needle, 1080, 1920, 20, 20);
 
-    c.bench_function("Dani approach", |b| {
+    /*c.bench_function("Dani approach", |b| {
         b.iter(|| find_needle(&haystack, &needle, 1080, 1920, 20, black_box(20)))
     });
 
-    c.bench_function("Jack approach", |b| b.iter(|| jack_attempt(&ac, &haystack)));
+    c.bench_function("Jack approach", |b| b.iter(|| jack_attempt(&ac, &haystack)));*/
 }
 
 criterion_group!(benches, criterion_benchmark);

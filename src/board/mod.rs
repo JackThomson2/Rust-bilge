@@ -1,23 +1,16 @@
+pub mod alt_search;
 pub mod defs;
 pub mod searcher;
 
 #[macro_use]
 mod helpers;
 
-use helpers::can_move;
 use colored::*;
 use defs::Pieces::{self, *};
+use helpers::can_move;
 
-use fasthash::MetroHasher;
-use std::hash::{Hash, Hasher};
-
+use arrayvec::ArrayVec;
 use rand::Rng;
-use arrayvec::{ArrayVec};
-
-pub struct HashEntry {
-    search_res: SearchResult,
-    depth: i8,
-}
 
 #[derive(Copy, Clone, Debug)]
 pub struct Move {
@@ -61,8 +54,17 @@ pub fn move_to_int(move_num: &Move) -> usize {
 }
 
 impl GameState {
+    pub fn as_dani_string(&self) -> String {
+        self.board
+            .iter()
+            .map(|pce| (*pce as u8) - 1)
+            .map(|st| st.to_string())
+            .collect()
+    }
+
     pub fn draw(&self) {
-        for (loc, piece) in self.board.iter().enumerate() {
+        println!();
+        for (loc, piece) in self.board.iter().enumerate().rev() {
             let x = x_pos!(loc);
             let y = y_pos!(loc);
 
@@ -72,29 +74,30 @@ impl GameState {
                 print!("{}", defs::draw_piece(piece));
             }
 
-            if x == 5 {
+            if x == 0 {
                 println!()
             }
         }
+        println!();
     }
 
     #[inline]
     fn remove_clears(&mut self) {
-        let board_size = &self.board.len();
-        for loc in self.to_clear.iter() {
-            assert!(loc < board_size);
-            self.board[*loc] = CLEARED
-        };
-        self.to_clear.clear();
+        while let Some(loc) = self.to_clear.pop() {
+            self.board[loc] = CLEARED
+        }
     }
 
     #[inline]
     fn jelly(&mut self, clearing: defs::Pieces) {
-        for (loc, _pce) in self.board.iter_mut()
-            .enumerate().filter(|(_loc, pce)| *pce == &clearing)
-            {
-                self.to_clear.push(loc)
-            }
+        for (loc, _pce) in self
+            .board
+            .iter_mut()
+            .enumerate()
+            .filter(|(_loc, pce)| *pce == &clearing)
+        {
+            unsafe { self.to_clear.push_unchecked(loc) }
+        }
     }
 
     #[inline]
@@ -106,32 +109,34 @@ impl GameState {
         let right = x < 5;
         let left = x > 0;
 
-        self.to_clear.push(pos);
+        unsafe {
+            self.to_clear.push_unchecked(pos);
 
-        if up {
-            self.to_clear.push(pos - 6);
-        }
-        if down {
-            self.to_clear.push(pos + 6);
-        }
-        if left {
-            self.to_clear.push(pos - 1);
-        }
-        if right {
-            self.to_clear.push(pos + 1);
-        }
+            if up {
+                self.to_clear.push_unchecked(pos - 6);
+            }
+            if down {
+                self.to_clear.push_unchecked(pos + 6);
+            }
+            if left {
+                self.to_clear.push_unchecked(pos - 1);
+            }
+            if right {
+                self.to_clear.push_unchecked(pos + 1);
+            }
 
-        if up && right {
-            self.to_clear.push(pos - 5);
-        }
-        if up && left {
-            self.to_clear.push(pos - 7);
-        }
-        if down && right {
-            self.to_clear.push(pos + 7);
-        }
-        if down && left {
-            self.to_clear.push(pos + 5);
+            if up && right {
+                self.to_clear.push_unchecked(pos - 5);
+            }
+            if up && left {
+                self.to_clear.push_unchecked(pos - 7);
+            }
+            if down && right {
+                self.to_clear.push_unchecked(pos + 7);
+            }
+            if down && left {
+                self.to_clear.push_unchecked(pos + 5);
+            }
         }
     }
 
@@ -140,8 +145,6 @@ impl GameState {
         if x_pos!(pos) == 5 {
             return -9001;
         }
-
-        let mut score = 0;
 
         let one = self.board[pos];
         let two = self.board[pos + 1];
@@ -180,38 +183,40 @@ impl GameState {
             self.board[pos] = two;
             self.board[pos + 1] = one;
 
-            score = 10 * self.get_combo(pos);
+            let score = 10 * self.get_combo(pos);
             if score > 0 {
-                self.something_cleared = true
+                self.clean_board()
             }
+            return score;
         }
 
         if self.something_cleared {
             self.clean_board()
         }
 
-        score
+        0
     }
 
     #[inline]
-    pub fn get_moves(&self) -> Vec<usize> {
-        let mut move_vec: Vec<usize> = Vec::with_capacity(60);
+    pub fn get_moves(&self) -> ArrayVec<[usize; 64]> {
+        let mut move_vec: ArrayVec<[usize; 64]> = ArrayVec::new();
 
         for (pos, pieces) in self.board.iter().enumerate() {
-            if x_pos!(pos) == 5 {continue;}
+            if x_pos!(pos) == 5 {
+                continue;
+            }
 
             let left = *pieces;
             if left == CLEARED || left == NULL {
                 continue;
             }
 
-            assert!(pos < self.board.len());
-            let right = self.board[pos + 1];
+            let right = unsafe { *self.board.get_unchecked(pos + 1) };
             if right == CLEARED || right == NULL || right == left {
                 continue;
             }
-            move_vec.push(pos);
-        };
+            unsafe { move_vec.push_unchecked(pos) };
+        }
 
         move_vec
     }
@@ -236,7 +241,9 @@ impl GameState {
             let board_size = self.board.len();
 
             if y > self.water_level && piece == CRAB {
-                self.to_clear.push(pos);
+                unsafe {
+                    self.to_clear.push_unchecked(pos);
+                }
                 returning = true;
                 continue;
             }
@@ -245,51 +252,52 @@ impl GameState {
                 continue;
             }
 
-            if x < 4 && pos < board_size - 2 && piece == self.board[pos + 1] && piece == self.board[pos + 2] {
-                self.to_clear.push(pos);
-                self.to_clear.push(pos + 1);
-                self.to_clear.push(pos + 2);
+            unsafe {
+                if x < 4
+                    && pos < board_size - 2
+                    && piece == *self.board.get_unchecked(pos + 1)
+                    && piece == *self.board.get_unchecked(pos + 2)
+                {
+                    self.to_clear.push_unchecked(pos);
+                    self.to_clear.push_unchecked(pos + 1);
+                    self.to_clear.push_unchecked(pos + 2);
 
-                returning = true;
+                    returning = true;
+                }
+
+                if pos < board_size - 12
+                    && piece == *self.board.get_unchecked(pos + 6)
+                    && piece == *self.board.get_unchecked(pos + 12)
+                {
+                    self.to_clear.push_unchecked(pos);
+                    self.to_clear.push_unchecked(pos + 6);
+                    self.to_clear.push_unchecked(pos + 12);
+
+                    returning = true;
+                }
             }
-
-            if pos < board_size - 12 && piece == self.board[pos + 6] && piece == self.board[pos + 12] {
-                self.to_clear.push(pos);
-                self.to_clear.push(pos + 6);
-                self.to_clear.push(pos + 12);
-
-                returning = true;
-            }
-        };
+        }
 
         returning
     }
 
     #[inline]
-    pub fn hash_me(&self) -> u64 {
-        let mut s = MetroHasher::default();
-        self.board.hash(&mut s);
-        s.finish()
-    }
-
-    #[inline]
     fn shift_everything(&mut self) {
-        let size = self.board.len();
         for x in 0..6 {
             let mut last = 99999;
             for y in 0..12 {
                 let pos = (y * 6) + x;
-                assert!(pos < size);
+                unsafe {
+                    if *self.board.get_unchecked(pos) == CLEARED && last == 99999 {
+                        last = y;
+                    }
 
-                if self.board[pos] == CLEARED && last == 99999 {
-                    last = y;
-                }
-
-                if last != 99999 && self.board[pos] != CLEARED {
-                    let last_pos = (last * 6) + x;
-                    self.board[last_pos] = self.board[pos];
-                    self.board[pos] = CLEARED;
-                    last += 1;
+                    if last != 99999 && *self.board.get_unchecked(pos) != CLEARED {
+                        let last_pos = (last * 6) + x;
+                        *self.board.get_unchecked_mut(last_pos) = *self.board.get_unchecked(pos);
+                        *self.board.get_unchecked_mut(pos) = CLEARED;
+                        last += 1;
+                    }
                 }
             }
         }
@@ -297,38 +305,31 @@ impl GameState {
 
     #[inline]
     pub fn get_best_combo(&self) -> i32 {
-        let mut max = 0;
-        let size = self.board.len();
-
-        for y in 0..(60 / 5) - 1 {
-            for x in 0..5 {
-                let pos = (y * 6) + x;
-
-                assert!(pos < size - 1);
-
-                let left_piece = self.board[pos];
-                let right_piece = self.board[pos + 1];
-
-                if left_piece != right_piece && can_move(left_piece) && can_move(right_piece)
-                {
-
-                    let combo = self.get_combo(pos);
-                    if combo > max {
-                        max = combo
-                    }
+        self.board
+            .iter()
+            .enumerate()
+            .filter(|(pos, left)| {
+                if *pos == 71 {
+                    return false;
                 }
-            }
-        }
 
-        max
+                let left = **left;
+
+                let right = unsafe { *self.board.get_unchecked(pos + 1) };
+
+                left != right && can_move(left) && can_move(right)
+            })
+            .map(|(pos, _)| self.get_combo(pos))
+            .max()
+            .unwrap_or(0)
     }
 
     #[inline]
     fn get_combo(&self, pos: usize) -> i32 {
         let x = x_pos!(pos);
 
-        let left_piece = unsafe {self.board.get_unchecked(pos)} ;
-        let right_piece = unsafe {self.board.get_unchecked(pos + 1)} ;
+        let left_piece = unsafe { self.board.get_unchecked(pos) };
+        let right_piece = unsafe { self.board.get_unchecked(pos + 1) };
 
         let mut left = 1; //left 3 pieces
         let mut l_col = 1; //left column of 5 pieces
@@ -336,12 +337,16 @@ impl GameState {
         let mut r_col = 1; //left column of 5 pieces
 
         unsafe {
-            if pos > 2 && self.board.get_unchecked(pos - 1) == left_piece &&
-                self.board.get_unchecked(pos - 2) == left_piece {
+            if pos > 2
+                && self.board.get_unchecked(pos - 1) == left_piece
+                && self.board.get_unchecked(pos - 2) == left_piece
+            {
                 left = 3;
             }
-            if x < 3 && self.board.get_unchecked(pos + 2) == right_piece
-                && self.board.get_unchecked(pos + 3) == right_piece {
+            if x < 3
+                && self.board.get_unchecked(pos + 2) == right_piece
+                && self.board.get_unchecked(pos + 3) == right_piece
+            {
                 right = 3;
             }
             if pos > 5 && self.board.get_unchecked(pos - 6) == left_piece {
@@ -352,7 +357,7 @@ impl GameState {
             }
             if pos < 66 && self.board.get_unchecked(pos + 6) == left_piece {
                 l_col += 1;
-                if pos < 60 &&  self.board.get_unchecked(pos + 12) == left_piece {
+                if pos < 60 && self.board.get_unchecked(pos + 12) == left_piece {
                     l_col += 1;
                 }
             }
@@ -425,7 +430,7 @@ pub fn generate_rand_board() -> GameState {
     for x in board.iter_mut() {
         if let Some(pce) = last {
             let mut to_use = defs::piece_from_num(rng.gen_range(1, 7));
-            while  to_use == pce {
+            while to_use == pce {
                 to_use = defs::piece_from_num(rng.gen_range(1, 7));
             }
             last = Some(to_use);
@@ -451,6 +456,19 @@ pub fn copy_board(copying: &GameState) -> GameState {
 pub fn board_from_array(board: [defs::Pieces; 6 * 12]) -> GameState {
     GameState {
         water_level: 3,
+        board,
+        to_clear: ArrayVec::new(),
+        something_cleared: false,
+    }
+}
+
+pub fn board_from_str(in_str: &str, water_level: usize) -> GameState {
+    let mut board = [defs::Pieces::NULL; 72];
+    let brd = defs::str_to_enum(in_str);
+    board.copy_from_slice(&brd[..]);
+
+    GameState {
+        water_level,
         board,
         to_clear: ArrayVec::new(),
         something_cleared: false,

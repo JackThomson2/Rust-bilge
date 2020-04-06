@@ -11,20 +11,25 @@ atomic-counter = "1"
 rand = "*"
 hashbrown = "0.7"
 num_cpus = "1.1"
+dashmap = "3"
 colored = { git = "https://github.com/tforgione/colored" }
 scrap = "0.5.0"
 lodepng = "2.0.0"
 uvth = "*"
-fasthash = "0.4"
 aho-corasick = "0.7"
 snmalloc-rs = "0.2"
 arrayvec = "0.5"
+rayon = "1.3"
 
 [profile.release]
 panic = "abort"
 opt-level = 3
 codegen-units = 1
 lto = "fat"
+
+[[bin]]
+name = "bilgebot"
+path = "src/main.rs"
 
 [profile.bench]
 opt-level = 3
@@ -35,5 +40,5 @@ lto = "fat"
 criterion = "0.3"
 
 [[bench]]
-name = "image"
+name = "par_search"
 harness = false

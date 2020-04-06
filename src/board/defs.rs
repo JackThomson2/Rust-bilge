@@ -17,6 +17,18 @@ pub enum Pieces {
     NULL = 255,
 }
 
+pub fn str_to_enum(input: &str) -> Vec<Pieces> {
+    input
+        .split("")
+        .filter_map(|pce| pce.parse().ok())
+        .map(dani_mapper)
+        .collect()
+}
+
+pub fn dani_mapper(val: i16) -> Pieces {
+    piece_from_num(val + 1)
+}
+
 pub fn piece_from_num(val: i16) -> Pieces {
     match val {
         0 => Pieces::CLEARED,
@@ -47,6 +59,6 @@ pub fn draw_piece(piece: &Pieces) -> &str {
         Pieces::CRAB => "H",
         Pieces::PUFFERFISH => "I",
         Pieces::JELLYFISH => "J",
-        Pieces::NULL => " "
+        Pieces::NULL => " ",
     }
 }

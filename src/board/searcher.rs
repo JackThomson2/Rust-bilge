@@ -1,14 +1,12 @@
 use crate::board::GameState;
-use std::collections::HashSet;
-
 use atomic_counter;
 use atomic_counter::AtomicCounter;
-use std::sync::{Arc};
-use std::{cmp, thread::spawn};
+use std::sync::Arc;
+use std::thread::spawn;
 
 #[derive(Debug)]
 pub struct Info {
-    turn: usize,
+    pub turn: usize,
     score: i32,
 }
 
@@ -17,14 +15,24 @@ fn dani_search(
     board: &GameState,
     depth: u8,
     move_number: usize,
-    moves: &mut HashSet<usize>,
+    moves: i8,
+    min_move: u8,
     cntr: &atomic_counter::RelaxedCounter,
 ) -> Info {
-    let mut max_score = 0i32;
     let mut copy = board.clone();
     cntr.inc();
 
     let score = copy.swap(move_number);
+
+    if depth == 1 {
+        let scorz = 10 * copy.get_best_combo();
+        return Info {
+            turn: move_number,
+            score: score + scorz,
+        };
+    }
+    let mut moves = moves;
+    let mut min_move = min_move;
 
     if score < 0 {
         return Info {
@@ -34,43 +42,33 @@ fn dani_search(
     }
 
     if !copy.something_cleared {
-        if moves.len() >= 5 {
+        if moves >= 3 {
             return Info {
                 turn: move_number,
                 score,
             };
         };
 
-        if moves.is_empty() {
-            for i in moves.iter() {
-                if i >= &move_number {
-                    return Info {
-                        turn: move_number,
-                        score,
-                    };
-                }
-            }
+        if moves >= 0 && min_move >= move_number as u8 {
+            return Info {
+                turn: move_number,
+                score,
+            };
         }
-
-        moves.insert(move_number);
+        moves += 1;
+        min_move = std::cmp::min(min_move, move_number as u8);
     } else {
-        moves.clear();
+        moves = 0;
+        min_move = std::u8::MAX;
     }
 
-    if depth == 1 {
-        let scorz = 10 * copy.get_best_combo();
-        return Info {
-            turn: move_number,
-            score: score + scorz,
-        };
-    }
-
-    let offset = 6;
-
-    for i in 1..=47 {
-        let score = dani_search(&copy, depth - 1, 72 - i, moves, cntr).score;
-        max_score = cmp::max(score, max_score);
-    }
+    let possible_moves = copy.get_moves();
+    let max_score = possible_moves
+        .iter()
+        .filter(|x| **x >= 10 && **x < 47)
+        .map(|i| dani_search(&copy, depth - 1, 72 - i, moves, min_move, cntr).score)
+        .max()
+        .unwrap();
 
     Info {
         turn: move_number,
@@ -79,13 +77,11 @@ fn dani_search(
 }
 
 pub fn find_best_move(board: &GameState) -> Info {
-    println!("Finding best move");
-    let depth = 11;
+    // println!("Finding best move");
+    let depth = 3;
 
     let possible_moves = board.get_moves();
     let cntr = Arc::new(atomic_counter::RelaxedCounter::new(0));
-
-    println!("there are {} moves", possible_moves.len());
 
     let mut best_scoring = Info {
         score: std::i32::MIN,
@@ -99,13 +95,7 @@ pub fn find_best_move(board: &GameState) -> Info {
         let cnt = cntr.clone();
 
         children.push(spawn(move || {
-            dani_search(
-                &test_board.clone(),
-                depth,
-                testing,
-                &mut HashSet::new(),
-                &cnt,
-            )
+            dani_search(&test_board.clone(), depth, testing, -1, std::u8::MAX, &cnt)
         }));
     }
 
@@ -117,12 +107,12 @@ pub fn find_best_move(board: &GameState) -> Info {
         }
     }
 
-    println!(
+    /*println!(
         "Best move at depth {} found {:#?} num of calcs {}",
         depth,
         best_scoring,
         cntr.get()
-    );
+    );*/
 
     best_scoring
 }
