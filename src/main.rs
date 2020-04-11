@@ -13,7 +13,7 @@ fn main() {
         let game = board::generate_rand_board();
         game.draw();
         let now = Instant::now();
-        board::alt_search::find_best_move(&game, 6);
+        board::alt_search::find_best_move(&game, 4);
 
         println!("Finding best move took {:?}", now.elapsed());
         game.draw();

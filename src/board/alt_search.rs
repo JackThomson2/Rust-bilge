@@ -36,7 +36,7 @@ fn dani_search(board: &GameState, depth: u8, move_number: usize, moves: i8, min_
       };
     };
 
-    if false && moves >= 0 && min_move <= move_number as u8 {
+    if moves >= 0 && min_move <= move_number as u8 {
       return Info {
         turn: move_number,
         score,
@@ -56,14 +56,14 @@ fn dani_search(board: &GameState, depth: u8, move_number: usize, moves: i8, min_
     possible_moves
       .par_iter()
       .filter(|x| **x >= 6 && **x < 66)
-      .map(|i| dani_search(&copy, depth - 1, 72 - i, moves, min_move).score)
+      .map(|i| dani_search(&copy, depth - 1, *i, moves, min_move).score)
       .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
       .unwrap()
   } else {
     possible_moves
       .iter()
       .filter(|x| **x >= 6 && **x < 66)
-      .map(|i| dani_search(&copy, depth - 1, 72 - i, moves, min_move).score)
+      .map(|i| dani_search(&copy, depth - 1, *i, moves, min_move).score)
       .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
       .unwrap()
   };
@@ -82,7 +82,7 @@ pub fn find_best_move(board: &GameState, depth: u8) -> Info {
 
   possible_moves
     .par_iter()
-    .map(|testing| dani_search(&board, depth, *testing, -1, std::u8::MIN))
+    .map(|testing| dani_search(&board, depth - 1, *testing, -1, std::u8::MIN))
     .max_by(|x, y| x.score.partial_cmp(&y.score).unwrap_or(Ordering::Equal))
     .unwrap()
 }
