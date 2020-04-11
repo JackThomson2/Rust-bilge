@@ -64,19 +64,19 @@ impl GameState {
 
     pub fn draw(&self) {
         println!();
-        for (loc, piece) in self.board.iter().enumerate().rev() {
-            let x = x_pos!(loc);
-            let y = y_pos!(loc);
 
-            if y <= self.water_level {
-                print!("{}", defs::draw_piece(piece).blue())
-            } else {
-                print!("{}", defs::draw_piece(piece));
-            }
+        for y in (0..12).rev() {
+            for x in 0..6 {
+                let pos = (y * 6) + x;
+                let piece = &self.board[pos];
 
-            if x == 0 {
-                println!()
+                if y <= self.water_level {
+                    print!("{}", defs::draw_piece(piece).blue())
+                } else {
+                    print!("{}", defs::draw_piece(piece));
+                }
             }
+            println!();
         }
         println!();
     }
@@ -141,9 +141,9 @@ impl GameState {
     }
 
     #[inline]
-    pub fn swap(&mut self, pos: usize) -> i32 {
+    pub fn swap(&mut self, pos: usize) -> f32 {
         if x_pos!(pos) == 5 {
-            return -9001;
+            return -9001.0;
         }
 
         let one = self.board[pos];
@@ -152,11 +152,11 @@ impl GameState {
         self.something_cleared = false;
 
         if one == CLEARED || two == CLEARED {
-            return -20001;
+            return -20001.0;
         } else if one == two {
-            return -30001;
+            return -30001.0;
         } else if one == CRAB {
-            return -9001;
+            return -9001.0;
         } else if one == PUFFERFISH || two == PUFFERFISH {
             if one == PUFFERFISH {
                 self.puff(pos);
@@ -168,7 +168,7 @@ impl GameState {
             self.shift_everything();
             self.something_cleared = true
         } else if two == CRAB {
-            return -90001;
+            return -90001.0;
         } else if one == JELLYFISH || two == JELLYFISH {
             if one == JELLYFISH {
                 self.jelly(one);
@@ -183,8 +183,8 @@ impl GameState {
             self.board[pos] = two;
             self.board[pos + 1] = one;
 
-            let score = 10 * self.get_combo(pos);
-            if score > 0 {
+            let score = 10.0 * self.get_combo(pos) as f32;
+            if score > 0.0 {
                 self.clean_board()
             }
             return score;
@@ -194,7 +194,7 @@ impl GameState {
             self.clean_board()
         }
 
-        0
+        0.0
     }
 
     #[inline]
@@ -309,7 +309,7 @@ impl GameState {
             .iter()
             .enumerate()
             .filter(|(pos, left)| {
-                if *pos == 71 {
+                if x_pos!(*pos) == 5 {
                     return false;
                 }
 
@@ -386,7 +386,6 @@ impl GameState {
         }
 
         let mut mult_ct = 1;
-        let mut ret = 0;
         if left == 3 {
             mult_ct += 1;
         }
@@ -412,13 +411,13 @@ impl GameState {
             return 100;
         }
         if mult_ct == 5 {
-            ret = 400;
+            return 400;
         }
         if mult_ct == 5 && (r_col == 5 || l_col == 5) {
             return 9001;
         }
 
-        ret
+        0
     }
 }
 

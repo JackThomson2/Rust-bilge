@@ -27,7 +27,8 @@ fn main() {
         let depth = u8::from_str_radix(&args[2], 10).unwrap();
 
         let game = board::board_from_str(&args[1], water_level);
-        let best_move = board::alt_search::find_best_move(&game, depth);
-        println!("{}", best_move.turn)
+        game.draw();
+        let best_move = board::alt_search::find_best_move(&game, 5);
+        println!("{} {}", best_move.turn, best_move.score)
     }
 }

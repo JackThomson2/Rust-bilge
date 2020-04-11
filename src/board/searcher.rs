@@ -22,7 +22,7 @@ fn dani_search(
     let mut copy = board.clone();
     cntr.inc();
 
-    let score = copy.swap(move_number);
+    let score = copy.swap(move_number) as i32;
 
     if depth == 1 {
         let scorz = 10 * copy.get_best_combo();
