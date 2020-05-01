@@ -3,7 +3,7 @@ pub mod defs;
 pub mod searcher;
 
 #[macro_use]
-mod helpers;
+pub mod helpers;
 
 use colored::*;
 use defs::Pieces::{self, *};
@@ -18,11 +18,12 @@ pub struct Move {
     y: usize,
 }
 
-#[derive(Clone)]
+#[derive(Clone, Copy)]
 pub struct GameState {
     board: [defs::Pieces; 6 * 12],
     water_level: usize,
-    to_clear: ArrayVec<[usize; 72]>,
+    to_clear: [usize; 72],
+    clear_count: usize,
     pub something_cleared: bool,
 }
 
@@ -83,21 +84,39 @@ impl GameState {
 
     #[inline]
     fn remove_clears(&mut self) {
-        while let Some(loc) = self.to_clear.pop() {
-            self.board[loc] = CLEARED
+        if self.clear_count == 0 {
+            return;
         }
+        for count in 0..self.clear_count - 1 {
+            unsafe {
+                let loc = self.to_clear.get_unchecked(count);
+                self.board[*loc] = CLEARED;
+            }
+        }
+        self.clear_count = 0;
     }
 
     #[inline]
     fn jelly(&mut self, clearing: defs::Pieces) {
         for (loc, _pce) in self
             .board
-            .iter_mut()
+            .iter()
             .enumerate()
             .filter(|(_loc, pce)| *pce == &clearing)
         {
-            unsafe { self.to_clear.push_unchecked(loc) }
+            unsafe {
+                *self.to_clear.get_unchecked_mut(self.clear_count) = loc;
+            }
+            self.clear_count += 1;
         }
+    }
+
+    #[inline]
+    fn push_to_clear(&mut self, loc: usize) {
+        unsafe {
+            *self.to_clear.get_unchecked_mut(self.clear_count) = loc;
+        }
+        self.clear_count += 1;
     }
 
     #[inline]
@@ -109,47 +128,44 @@ impl GameState {
         let right = x < 5;
         let left = x > 0;
 
-        unsafe {
-            self.to_clear.push_unchecked(pos);
+        self.push_to_clear(pos);
 
-            if up {
-                self.to_clear.push_unchecked(pos - 6);
-            }
-            if down {
-                self.to_clear.push_unchecked(pos + 6);
-            }
-            if left {
-                self.to_clear.push_unchecked(pos - 1);
-            }
-            if right {
-                self.to_clear.push_unchecked(pos + 1);
-            }
+        if up {
+            self.push_to_clear(pos - 6);
+        }
+        if down {
+            self.push_to_clear(pos + 6);
+        }
+        if left {
+            self.push_to_clear(pos - 1);
+        }
+        if right {
+            self.push_to_clear(pos + 1);
+        }
 
-            if up && right {
-                self.to_clear.push_unchecked(pos - 5);
-            }
-            if up && left {
-                self.to_clear.push_unchecked(pos - 7);
-            }
-            if down && right {
-                self.to_clear.push_unchecked(pos + 7);
-            }
-            if down && left {
-                self.to_clear.push_unchecked(pos + 5);
-            }
+        if up && right {
+            self.push_to_clear(pos - 5);
+        }
+        if up && left {
+            self.push_to_clear(pos - 7);
+        }
+        if down && right {
+            self.push_to_clear(pos + 7);
+        }
+        if down && left {
+            self.push_to_clear(pos + 5);
         }
     }
 
     #[inline]
     pub fn swap(&mut self, pos: usize) -> f32 {
-        if x_pos!(pos) == 5 {
+        self.something_cleared = false;
+        if pos >= 71 || x_pos!(pos) == 5 {
             return -9001.0;
         }
 
-        let one = self.board[pos];
-        let two = self.board[pos + 1];
-
-        self.something_cleared = false;
+        let one = unsafe { *self.board.get_unchecked(pos) };
+        let two = unsafe { *self.board.get_unchecked(pos + 1) };
 
         if one == CLEARED || two == CLEARED {
             return -20001.0;
@@ -242,8 +258,9 @@ impl GameState {
 
             if y > self.water_level && piece == CRAB {
                 unsafe {
-                    self.to_clear.push_unchecked(pos);
+                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
                 }
+                self.clear_count += 1;
                 returning = true;
                 continue;
             }
@@ -258,9 +275,10 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 1)
                     && piece == *self.board.get_unchecked(pos + 2)
                 {
-                    self.to_clear.push_unchecked(pos);
-                    self.to_clear.push_unchecked(pos + 1);
-                    self.to_clear.push_unchecked(pos + 2);
+                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos;
+                    self.clear_count += 3;
 
                     returning = true;
                 }
@@ -269,9 +287,10 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 6)
                     && piece == *self.board.get_unchecked(pos + 12)
                 {
-                    self.to_clear.push_unchecked(pos);
-                    self.to_clear.push_unchecked(pos + 6);
-                    self.to_clear.push_unchecked(pos + 12);
+                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 6) = pos;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 12) = pos;
+                    self.clear_count += 3;
 
                     returning = true;
                 }
@@ -288,13 +307,14 @@ impl GameState {
             for y in 0..12 {
                 let pos = (y * 6) + x;
                 unsafe {
-                    if *self.board.get_unchecked(pos) == CLEARED && last == 99999 {
+                    let checking = *self.board.get_unchecked(pos);
+                    if checking == CLEARED && last == 99999 {
                         last = y;
                     }
 
-                    if last != 99999 && *self.board.get_unchecked(pos) != CLEARED {
+                    if last != 99999 && checking != CLEARED {
                         let last_pos = (last * 6) + x;
-                        *self.board.get_unchecked_mut(last_pos) = *self.board.get_unchecked(pos);
+                        *self.board.get_unchecked_mut(last_pos) = checking;
                         *self.board.get_unchecked_mut(pos) = CLEARED;
                         last += 1;
                     }
@@ -443,20 +463,22 @@ pub fn generate_rand_board() -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: ArrayVec::new(),
+        to_clear: [0; 72],
+        clear_count: 0,
         something_cleared: false,
     }
 }
 
 pub fn copy_board(copying: &GameState) -> GameState {
-    copying.clone()
+    *copying
 }
 
 pub fn board_from_array(board: [defs::Pieces; 6 * 12]) -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: ArrayVec::new(),
+        to_clear: [0; 72],
+        clear_count: 0,
         something_cleared: false,
     }
 }
@@ -469,7 +491,8 @@ pub fn board_from_str(in_str: &str, water_level: usize) -> GameState {
     GameState {
         water_level,
         board,
-        to_clear: ArrayVec::new(),
+        to_clear: [0; 72],
+        clear_count: 0,
         something_cleared: false,
     }
 }
@@ -478,7 +501,8 @@ pub fn generate_game() -> GameState {
     GameState {
         water_level: 3,
         board: [defs::Pieces::CLEARED; 6 * 12],
-        to_clear: ArrayVec::new(),
+        to_clear: [0; 72],
+        clear_count: 0,
         something_cleared: false,
     }
 }

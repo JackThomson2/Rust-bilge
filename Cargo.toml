@@ -19,7 +19,7 @@ uvth = "*"
 aho-corasick = "0.7"
 snmalloc-rs = "0.2"
 arrayvec = "0.5"
-rayon = "1.3"
+rayon = { git = "https://github.com/nikomatsakis/rayon", branch = "latch-target-thread-2" }
 
 [profile.release]
 panic = "abort"
@@ -37,7 +37,7 @@ codegen-units = 1
 lto = "fat"
 
 [dev-dependencies]
-criterion = "0.3"
+#criterion = "0.3"
 
 [[bench]]
 name = "par_search"

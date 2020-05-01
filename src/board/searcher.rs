@@ -1,5 +1,4 @@
 use crate::board::GameState;
-use atomic_counter;
 use atomic_counter::AtomicCounter;
 use std::sync::Arc;
 use std::thread::spawn;
@@ -19,7 +18,7 @@ fn dani_search(
     min_move: u8,
     cntr: &atomic_counter::RelaxedCounter,
 ) -> Info {
-    let mut copy = board.clone();
+    let mut copy = *board;
     cntr.inc();
 
     let score = copy.swap(move_number) as i32;
@@ -91,7 +90,7 @@ pub fn find_best_move(board: &GameState) -> Info {
     let mut children = Vec::with_capacity(possible_moves.len());
 
     for testing in possible_moves {
-        let test_board = board.clone();
+        let test_board = *board;
         let cnt = cntr.clone();
 
         children.push(spawn(move || {
