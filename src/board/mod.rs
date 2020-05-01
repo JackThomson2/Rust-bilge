@@ -2,6 +2,8 @@ pub mod alt_search;
 pub mod defs;
 pub mod searcher;
 
+use seahash;
+
 #[macro_use]
 pub mod helpers;
 
@@ -155,6 +157,12 @@ impl GameState {
         if down && left {
             self.push_to_clear(pos + 5);
         }
+    }
+
+    #[inline]
+    pub fn hash_board(&self) -> u64 {
+        let checking: &[u8; 72] = unsafe { std::mem::transmute(&self.board) };
+        seahash::hash(checking)
     }
 
     #[inline]

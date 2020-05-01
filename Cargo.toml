@@ -19,6 +19,7 @@ uvth = "*"
 aho-corasick = "0.7"
 snmalloc-rs = "0.2"
 arrayvec = "0.5"
+seahash = "4"
 rayon = { git = "https://github.com/nikomatsakis/rayon", branch = "latch-target-thread-2" }
 
 [profile.release]
