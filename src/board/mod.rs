@@ -207,7 +207,7 @@ impl GameState {
             self.board[pos] = two;
             self.board[pos + 1] = one;
 
-            let score = 10.0 * self.get_combo(pos) as f32;
+            let score = self.get_combo(pos) as f32;
             if score > 0.0 {
                 self.clean_board()
             }
@@ -404,48 +404,39 @@ impl GameState {
         }
 
         if r_col < 3 {
-            r_col = 1;
+            r_col = 0;
         }
         if l_col < 3 {
-            l_col = 1;
+            l_col = 0;
         }
-        if left == right && l_col == left && r_col == left && left == 1 {
-            return 0;
+        if left < 3 {
+            left = 0;
+        }
+        if right < 3 {
+            right = 0;
         }
 
-        let mut mult_ct = 1;
+        let mut mult_ct = 0;
         if left == 3 {
             mult_ct += 1;
         }
         if right == 3 {
             mult_ct += 1;
         }
-        if l_col == 3 {
+
+        if l_col >= 3 {
             mult_ct += 1;
         }
-        if r_col == 3 {
+        if r_col >= 3 {
             mult_ct += 1;
-        }
-        if mult_ct == 1 {
-            return 0;
-        }
-        if mult_ct == 2 {
-            return 2;
-        }
-        if mult_ct == 3 {
-            return 25;
-        }
-        if mult_ct == 4 {
-            return 100;
-        }
-        if mult_ct == 5 {
-            return 400;
-        }
-        if mult_ct == 5 && (r_col == 5 || l_col == 5) {
-            return 9001;
         }
 
-        0
+        // Nothing broke
+        if mult_ct == 0 {
+            return 0;
+        }
+
+        (row_score!(left) + row_score!(right) + row_score!(l_col) + row_score!(r_col)) * mult_ct
     }
 }
 

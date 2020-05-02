@@ -82,10 +82,19 @@ fn search(
 
     let possible_moves = copy.get_moves();
 
+    let vert_range = 30;
+
+    let upper_range = std::cmp::min(71, move_number + vert_range);
+    let lower_range = if (move_number as isize - vert_range as isize) < 0 {
+        0
+    } else {
+        move_number - vert_range
+    };
+
     let max_score = if depth > 2 {
         possible_moves
             .par_iter()
-            .filter(|x| **x >= 6 && **x < 66)
+            .filter(|x| **x >= lower_range && **x < upper_range)
             .map(|i| {
                 search(
                     &copy,
@@ -105,7 +114,7 @@ fn search(
     } else {
         possible_moves
             .iter()
-            .filter(|x| **x >= 6 && **x < 66)
+            .filter(|x| **x >= lower_range && **x < upper_range)
             .map(|i| {
                 search(
                     &copy,

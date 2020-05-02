@@ -12,10 +12,13 @@ fn main() {
     if args.len() == 1 {
         let game = board::generate_rand_board();
         game.draw();
-        let now = Instant::now();
-        board::alt_search::find_best_move(&game, 6);
 
-        println!("Finding best move took {:?}", now.elapsed());
+        for i in 0..10 {
+            let now = Instant::now();
+            board::alt_search::find_best_move(&game, 5);
+
+            println!("Finding best move took {:?}", now.elapsed());
+        }
         game.draw();
     } else if args.len() == 4 {
         if args[1].len() != 72 {
