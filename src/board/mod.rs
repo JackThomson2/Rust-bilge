@@ -332,27 +332,6 @@ impl GameState {
     }
 
     #[inline]
-    pub fn get_best_combo(&self) -> i32 {
-        self.board
-            .iter()
-            .enumerate()
-            .filter(|(pos, left)| {
-                if x_pos!(*pos) == 5 {
-                    return false;
-                }
-
-                let left = **left;
-
-                let right = unsafe { *self.board.get_unchecked(pos + 1) };
-
-                left != right && can_move(left) && can_move(right)
-            })
-            .map(|(pos, _)| self.get_combo(pos))
-            .max()
-            .unwrap_or(0)
-    }
-
-    #[inline]
     fn get_combo(&self, pos: usize) -> i32 {
         let x = x_pos!(pos);
 
