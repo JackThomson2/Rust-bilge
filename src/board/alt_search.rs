@@ -11,7 +11,7 @@ pub struct Info {
     pub score: f32,
 }
 
-type HashTable = DashMap<u64, hash_entry>;
+type HashTable = DashMap<u64, HashEntry>;
 
 #[inline]
 fn search(
@@ -25,6 +25,7 @@ fn search(
     hasher: &HashTable,
     hash_hits: &atomic_counter::RelaxedCounter,
 ) -> Info {
+    let moves_made = ((max_depth - depth) + 1) as f32;
     let mut copy = *board;
     cntr.inc();
     let score = copy.swap(move_number);
@@ -38,38 +39,24 @@ fn search(
                 hash_hits.inc();
                 return Info {
                     turn: move_number,
-                    score: found.score,
+                    score: found.score / moves_made,
                 };
             }
         }
     }
 
-    if score < 0.0 {
+    if score < 0.0 || depth == 1 {
         return Info {
             turn: move_number,
-            score,
-        };
-    }
-
-    if depth == 1 {
-        return Info {
-            turn: move_number,
-            score,
+            score: score / moves_made,
         };
     }
 
     if !copy.something_cleared {
-        if moves >= 6 {
+        if moves >= 6 || (moves >= 0 && min_move >= move_number as u8) {
             return Info {
                 turn: move_number,
-                score,
-            };
-        };
-
-        if moves >= 0 && min_move >= move_number as u8 {
-            return Info {
-                turn: move_number,
-                score,
+                score: score / moves_made,
             };
         }
     }
@@ -139,15 +126,15 @@ fn search(
                 hash_hits.inc();
                 return Info {
                     turn: move_number,
-                    score: found.score,
+                    score: found.score / moves_made,
                 };
             }
         }
 
         hasher.insert(
             key,
-            hash_entry {
-                score: (score as f32 + (max_score as f32) * 0.9),
+            HashEntry {
+                score: score + max_score,
                 depth,
             },
         );
@@ -155,11 +142,11 @@ fn search(
 
     Info {
         turn: move_number,
-        score: (score as f32 + (max_score as f32) * 0.9),
+        score: (score / moves_made) + max_score,
     }
 }
 
-struct hash_entry {
+struct HashEntry {
     score: f32,
     depth: u8,
 }

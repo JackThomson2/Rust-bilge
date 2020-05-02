@@ -13,7 +13,7 @@ fn main() {
         let game = board::generate_rand_board();
         game.draw();
 
-        for i in 0..10 {
+        for _i in 0..10 {
             let now = Instant::now();
             board::alt_search::find_best_move(&game, 5);
 
