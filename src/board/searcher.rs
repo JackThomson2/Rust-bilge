@@ -24,7 +24,7 @@ fn dani_search(
     let score = copy.swap(move_number) as i32;
 
     if depth == 1 {
-        let scorz = 10 * copy.get_best_combo();
+        let scorz = 10;
         return Info {
             turn: move_number,
             score: score + scorz,

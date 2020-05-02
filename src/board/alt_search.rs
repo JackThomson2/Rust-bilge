@@ -152,8 +152,6 @@ struct HashEntry {
 }
 
 pub fn find_best_move(board: &GameState, depth: u8) -> Info {
-    // println!("Finding best move");
-
     let hash_table: HashTable = DashMap::new();
 
     let possible_moves = board.get_moves();
@@ -179,9 +177,11 @@ pub fn find_best_move(board: &GameState, depth: u8) -> Info {
         .unwrap();
 
     println!(
-        "Searched {} positions, {} hash hits",
+        "Searched {} positions, {} hash hits, best move {} with score {}",
         cntr.get(),
-        hash_hits.get()
+        hash_hits.get(),
+        best_move.turn,
+        best_move.score
     );
 
     best_move

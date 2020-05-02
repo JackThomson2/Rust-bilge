@@ -10,15 +10,16 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 1 {
-        let game = board::generate_rand_board();
+        let mut game = board::generate_rand_board();
         game.draw();
 
-        for _i in 0..10 {
-            let now = Instant::now();
-            board::alt_search::find_best_move(&game, 5);
+        let now = Instant::now();
+        let moving = board::alt_search::find_best_move(&game, 1);
 
-            println!("Finding best move took {:?}", now.elapsed());
-        }
+        println!("Finding best move took {:?}", now.elapsed());
+
+        game.draw_highlight(moving.turn);
+        game.swap(moving.turn);
         game.draw();
     } else if args.len() == 4 {
         if args[1].len() != 72 {

@@ -66,6 +66,10 @@ impl GameState {
     }
 
     pub fn draw(&self) {
+        self.draw_highlight(99);
+    }
+
+    pub fn draw_highlight(&self, position: usize) {
         println!();
 
         for y in (0..12).rev() {
@@ -73,13 +77,17 @@ impl GameState {
                 let pos = (y * 6) + x;
                 let piece = &self.board[pos];
 
-                if y <= self.water_level {
+                if pos == position || pos == position + 1 {
+                    print!("{}", defs::draw_piece(piece).bright_green())
+                } else if x_pos!(pos) == 5 {
+                    print!("{}", defs::draw_piece(piece).red())
+                } else if y <= self.water_level {
                     print!("{}", defs::draw_piece(piece).blue())
                 } else {
                     print!("{}", defs::draw_piece(piece));
                 }
             }
-            println!();
+            println!(" : {}", y);
         }
         println!();
     }
@@ -89,12 +97,14 @@ impl GameState {
         if self.clear_count == 0 {
             return;
         }
-        for count in 0..self.clear_count - 1 {
+
+        for count in 0..self.clear_count {
             unsafe {
                 let loc = self.to_clear.get_unchecked(count);
-                self.board[*loc] = CLEARED;
+                *self.board.get_unchecked_mut(*loc) = CLEARED;
             }
         }
+
         self.clear_count = 0;
     }
 
@@ -125,7 +135,7 @@ impl GameState {
     fn puff(&mut self, pos: usize) {
         let x = x_pos!(pos);
 
-        let up = pos > 6;
+        let up = pos >= 6;
         let down = pos < 66;
         let right = x < 5;
         let left = x > 0;
@@ -262,7 +272,7 @@ impl GameState {
             let x = x_pos!(pos);
             let y = y_pos!(pos);
 
-            let board_size = self.board.len();
+            let board_size = 72;
 
             if y > self.water_level && piece == CRAB {
                 unsafe {
@@ -284,8 +294,8 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 2)
                 {
                     *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 1;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 2;
                     self.clear_count += 3;
 
                     returning = true;
@@ -296,8 +306,8 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 12)
                 {
                     *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 6) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 12) = pos;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 6;
+                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 12;
                     self.clear_count += 3;
 
                     returning = true;
@@ -312,7 +322,7 @@ impl GameState {
     fn shift_everything(&mut self) {
         for x in 0..6 {
             let mut last = 99999;
-            for y in 0..12 {
+            for y in (0..12).rev() {
                 let pos = (y * 6) + x;
                 unsafe {
                     let checking = *self.board.get_unchecked(pos);
@@ -324,7 +334,7 @@ impl GameState {
                         let last_pos = (last * 6) + x;
                         *self.board.get_unchecked_mut(last_pos) = checking;
                         *self.board.get_unchecked_mut(pos) = CLEARED;
-                        last += 1;
+                        last -= 1;
                     }
                 }
             }
