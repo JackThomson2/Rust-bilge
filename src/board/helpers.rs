@@ -17,6 +17,13 @@ macro_rules! y_pos {
     };
 }
 
+pub fn move_to_dani_move(movement: usize) -> usize {
+    let x = x_pos!(movement);
+    let y = 12 - y_pos!(movement);
+
+    (y * 5) + x + 1
+}
+
 macro_rules! row_score {
     ($x:expr) => {
         match $x {

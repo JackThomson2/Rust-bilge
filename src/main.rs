@@ -1,4 +1,5 @@
 pub mod board;
+use board::helpers::move_to_dani_move;
 
 use std::env;
 use std::time::Instant;
@@ -14,9 +15,15 @@ fn main() {
         game.draw();
 
         let now = Instant::now();
-        let moving = board::alt_search::find_best_move(&game, 1);
+        let moving = board::alt_search::find_best_move(&game, 5);
 
-        println!("Finding best move took {:?}", now.elapsed());
+        let dani_move = move_to_dani_move(moving.turn);
+
+        println!(
+            "Finding best move took {:?} as Dani move {}",
+            now.elapsed(),
+            dani_move
+        );
 
         game.draw_highlight(moving.turn);
         game.swap(moving.turn);
