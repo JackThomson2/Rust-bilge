@@ -185,6 +185,8 @@ impl GameState {
         let one = unsafe { *self.board.get_unchecked(pos) };
         let two = unsafe { *self.board.get_unchecked(pos + 1) };
 
+        let mut return_score = 0.0;
+
         if one == CLEARED || two == CLEARED {
             return -20001.0;
         } else if one == two {
@@ -198,6 +200,7 @@ impl GameState {
                 self.puff(pos + 1);
             }
 
+            return_score = self.clear_count as f32;
             self.remove_clears();
             self.shift_everything();
             self.something_cleared = true
@@ -210,6 +213,7 @@ impl GameState {
                 self.jelly(two);
             }
 
+            return_score = 300.0;
             self.remove_clears();
             self.shift_everything();
             self.something_cleared = true
@@ -217,18 +221,18 @@ impl GameState {
             self.board[pos] = two;
             self.board[pos + 1] = one;
 
-            let score = self.get_combo(pos) as f32;
+            let mut score = self.get_combo(pos) as f32;
             if score > 0.0 {
-                self.clean_board()
+                score += self.clean_board();
             }
             return score;
         }
 
         if self.something_cleared {
-            self.clean_board()
+            return_score += self.clean_board();
         }
 
-        0.0
+        return_score
     }
 
     #[inline]
@@ -256,11 +260,15 @@ impl GameState {
     }
 
     #[inline]
-    pub fn clean_board(&mut self) {
+    pub fn clean_board(&mut self) -> f32 {
+        let mut extra_broken = 0.0;
         while self.mark_clears() {
+            extra_broken += self.clear_count as f32;
             self.remove_clears();
             self.shift_everything();
         }
+
+        extra_broken
     }
 
     #[inline]
@@ -424,8 +432,30 @@ impl GameState {
         if mult_ct == 0 {
             return 0;
         }
+        /*
+        if mult_ct == 2 {
+            return 2;
+        }
+        if mult_ct == 3 {
+            return 25;
+        }
+        if mult_ct == 4 {
+            return 100;
+        } */
+        if mult_ct == 5 && (r_col == 5 && l_col == 5) {
+            return 9999999; // Minus to give space for other points
+        }
 
-        (row_score!(left) + row_score!(right) + row_score!(l_col) + row_score!(r_col)) * mult_ct
+        if mult_ct == 5 && (r_col == 5 || l_col == 5) {
+            return 999999; // Minus to give space for other points
+        }
+
+        /*if mult_ct == 5 {
+            return 400;
+        }*/
+
+        (row_score!(left) + row_score!(right) + row_score!(l_col) + row_score!(r_col))
+            * promote_scorers!(mult_ct)
     }
 }
 

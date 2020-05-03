@@ -17,11 +17,24 @@ macro_rules! y_pos {
     };
 }
 
+#[inline]
 pub fn move_to_dani_move(movement: usize) -> usize {
     let x = x_pos!(movement);
     let y = 12 - y_pos!(movement);
 
-    (y * 5) + x + 1
+    (y * 5) + x
+}
+
+macro_rules! promote_scorers {
+    ($x:expr) => {
+        match $x {
+            2 => 2,
+            3 => 3,
+            4 => 100,
+            5 => 10000,
+            _ => $x,
+        }
+    };
 }
 
 macro_rules! row_score {

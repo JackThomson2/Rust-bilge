@@ -11,11 +11,11 @@ fn main() {
     let args: Vec<String> = env::args().collect();
 
     if args.len() == 1 {
-        let mut game = board::generate_rand_board();
+        let game = board::generate_rand_board();
         game.draw();
 
         let now = Instant::now();
-        let moving = board::alt_search::find_best_move(&game, 5);
+        let moving = board::alt_search::find_best_move(&game, 5, true);
 
         let dani_move = move_to_dani_move(moving.turn);
 
@@ -26,8 +26,6 @@ fn main() {
         );
 
         game.draw_highlight(moving.turn);
-        game.swap(moving.turn);
-        game.draw();
     } else if args.len() == 4 {
         if args[1].len() != 72 {
             println!("We need a string of 72 length, this was {}", args[1].len());
@@ -38,8 +36,11 @@ fn main() {
         let depth = u8::from_str_radix(&args[2], 10).unwrap();
 
         let game = board::board_from_str(&args[1], water_level);
-        game.draw();
-        let best_move = board::alt_search::find_best_move(&game, depth);
-        println!("{} {}", best_move.turn, best_move.score)
+        let best_move = board::alt_search::find_best_move(&game, depth, false);
+        let dani_move = move_to_dani_move(best_move.turn);
+        println!(
+            "{} {} ran at depth {}, {}",
+            dani_move, best_move.score, depth, best_move.info_str
+        )
     }
 }

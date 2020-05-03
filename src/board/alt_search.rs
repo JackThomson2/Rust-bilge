@@ -5,10 +5,19 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+const drop_per_turn: f32 = 0.90;
+
 #[derive(Debug)]
 pub struct Info {
     pub turn: usize,
     pub score: f32,
+}
+
+#[derive(Debug)]
+pub struct TurnInfo {
+    pub turn: usize,
+    pub score: f32,
+    pub info_str: String,
 }
 
 type HashTable = DashMap<u64, HashEntry>;
@@ -25,21 +34,30 @@ fn search(
     hasher: &HashTable,
     hash_hits: &atomic_counter::RelaxedCounter,
 ) -> Info {
-    let moves_made = ((max_depth - depth) + 1) as f32;
+    let moves_made = 1.1; // ((max_depth - depth) + 1) as f32;
     let mut copy = *board;
     cntr.inc();
     let score = copy.swap(move_number);
 
+    let hash_table_range = (max_depth - depth) <= 1;
+
     let mut board_hash = None;
-    if max_depth - depth <= 1 {
+    if hash_table_range {
         let hash = copy.hash_board();
         board_hash = Some(hash);
         if let Some(found) = hasher.get(&hash) {
             if found.depth >= depth {
                 hash_hits.inc();
+
+                let drop = if found.depth == depth {
+                    1.0
+                } else {
+                    drop_per_turn
+                };
+
                 return Info {
                     turn: move_number,
-                    score: found.score / moves_made,
+                    score: found.score * drop,
                 };
             }
         }
@@ -48,15 +66,15 @@ fn search(
     if score < 0.0 || depth == 1 {
         return Info {
             turn: move_number,
-            score: score / moves_made,
+            score,
         };
     }
 
     if !copy.something_cleared {
-        if moves >= 6 || (moves >= 0 && min_move >= move_number as u8) {
+        if moves >= 4 || (true && min_move >= move_number as u8) {
             return Info {
                 turn: move_number,
-                score: score / moves_made,
+                score,
             };
         }
     }
@@ -81,7 +99,7 @@ fn search(
     let max_score = if depth > 2 {
         possible_moves
             .par_iter()
-            .filter(|x| **x >= lower_range && **x < upper_range)
+            //.filter(|x| **x >= 6 && **x < 66)
             .map(|i| {
                 search(
                     &copy,
@@ -101,7 +119,7 @@ fn search(
     } else {
         possible_moves
             .iter()
-            .filter(|x| **x >= lower_range && **x < upper_range)
+            //.filter(|x| **x >= 6 && **x < 66)
             .map(|i| {
                 search(
                     &copy,
@@ -124,9 +142,16 @@ fn search(
         if let Some(found) = hasher.get(&key) {
             if found.depth >= depth {
                 hash_hits.inc();
+
+                let drop = if found.depth == depth {
+                    1.0
+                } else {
+                    drop_per_turn
+                };
+
                 return Info {
                     turn: move_number,
-                    score: found.score / moves_made,
+                    score: found.score * drop,
                 };
             }
         }
@@ -134,7 +159,7 @@ fn search(
         hasher.insert(
             key,
             HashEntry {
-                score: score + max_score,
+                score: score + (max_score * drop_per_turn),
                 depth,
             },
         );
@@ -142,7 +167,7 @@ fn search(
 
     Info {
         turn: move_number,
-        score: (score / moves_made) + max_score,
+        score: (score) + (max_score * drop_per_turn),
     }
 }
 
@@ -151,7 +176,7 @@ struct HashEntry {
     depth: u8,
 }
 
-pub fn find_best_move(board: &GameState, depth: u8) -> Info {
+pub fn find_best_move(board: &GameState, depth: u8, verbose: bool) -> TurnInfo {
     let hash_table: HashTable = DashMap::new();
 
     let possible_moves = board.get_moves();
@@ -176,13 +201,23 @@ pub fn find_best_move(board: &GameState, depth: u8) -> Info {
         .max_by(|x, y| x.score.partial_cmp(&y.score).unwrap_or(Ordering::Equal))
         .unwrap();
 
-    println!(
-        "Searched {} positions, {} hash hits, best move {} with score {}",
-        cntr.get(),
-        hash_hits.get(),
-        best_move.turn,
-        best_move.score
-    );
+    if verbose {
+        println!(
+            "Searched {} positions, {} hash hits, best move {} with score {}",
+            cntr.get(),
+            hash_hits.get(),
+            best_move.turn,
+            best_move.score
+        );
+    }
 
-    best_move
+    TurnInfo {
+        turn: best_move.turn,
+        score: best_move.score,
+        info_str: format!(
+            "Searched {} positions, {} hash hits.",
+            cntr.get(),
+            hash_hits.get()
+        ),
+    }
 }
