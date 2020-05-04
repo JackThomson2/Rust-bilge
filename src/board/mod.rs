@@ -191,7 +191,7 @@ impl GameState {
             return -20001.0;
         } else if one == two {
             return -30001.0;
-        } else if one == CRAB {
+        } else if one == CRAB || two == CRAB {
             return -9001.0;
         } else if one == PUFFERFISH || two == PUFFERFISH {
             if one == PUFFERFISH {
@@ -204,16 +204,14 @@ impl GameState {
             self.remove_clears();
             self.shift_everything();
             self.something_cleared = true
-        } else if two == CRAB {
-            return -90001.0;
         } else if one == JELLYFISH || two == JELLYFISH {
             if one == JELLYFISH {
-                self.jelly(one);
-            } else {
                 self.jelly(two);
+            } else {
+                self.jelly(one);
             }
+            return_score = self.clear_count as f32;
 
-            return_score = 300.0;
             self.remove_clears();
             self.shift_everything();
             self.something_cleared = true
@@ -262,18 +260,23 @@ impl GameState {
     #[inline]
     pub fn clean_board(&mut self) -> f32 {
         let mut extra_broken = 0.0;
-        while self.mark_clears() {
+        let mut clear_res = self.mark_clears();
+
+        while clear_res.0 {
             extra_broken += self.clear_count as f32;
+            extra_broken += clear_res.1;
             self.remove_clears();
             self.shift_everything();
+            clear_res = self.mark_clears();
         }
 
         extra_broken
     }
 
     #[inline]
-    fn mark_clears(&mut self) -> bool {
+    fn mark_clears(&mut self) -> (bool, f32) {
         let mut returning = false;
+        let mut bonus_score = 0.0;
 
         for (pos, piece) in self.board.iter().enumerate() {
             let piece = *piece;
@@ -288,6 +291,8 @@ impl GameState {
                 }
                 self.clear_count += 1;
                 returning = true;
+                bonus_score += (self.water_level * 2) as f32;
+
                 continue;
             }
 
@@ -309,7 +314,7 @@ impl GameState {
                     returning = true;
                 }
 
-                if pos < board_size - 12
+                if pos < 62
                     && piece == *self.board.get_unchecked(pos + 6)
                     && piece == *self.board.get_unchecked(pos + 12)
                 {
@@ -323,7 +328,7 @@ impl GameState {
             }
         }
 
-        returning
+        (returning, bonus_score)
     }
 
     #[inline]
@@ -362,7 +367,7 @@ impl GameState {
         let mut r_col = 1; //left column of 5 pieces
 
         unsafe {
-            if pos > 2
+            if x >= 2
                 && self.board.get_unchecked(pos - 1) == left_piece
                 && self.board.get_unchecked(pos - 2) == left_piece
             {
@@ -442,11 +447,11 @@ impl GameState {
         if mult_ct == 4 {
             return 100;
         } */
-        if mult_ct == 5 && (r_col == 5 && l_col == 5) {
+        if mult_ct == 4 && (r_col == 5 && l_col == 5) {
             return 9999999; // Minus to give space for other points
         }
 
-        if mult_ct == 5 && (r_col == 5 || l_col == 5) {
+        if mult_ct == 4 && (r_col == 5 || l_col == 5) {
             return 999999; // Minus to give space for other points
         }
 

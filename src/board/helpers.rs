@@ -29,9 +29,8 @@ macro_rules! promote_scorers {
     ($x:expr) => {
         match $x {
             2 => 2,
-            3 => 3,
-            4 => 100,
-            5 => 10000,
+            3 => 100,
+            4 => 10000,
             _ => $x,
         }
     };
