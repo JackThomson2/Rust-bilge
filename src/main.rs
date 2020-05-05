@@ -18,7 +18,7 @@ fn main() {
         game.draw();
 
         let now = Instant::now();
-        let moving = board::alt_search::find_best_move_list(&game, 5, true, &hash_table);
+        let moving = board::alt_search::find_best_move_list(&game, 8, true, &hash_table);
 
         println!("Turns {:?}", &moving.turns[..]);
 

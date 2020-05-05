@@ -314,7 +314,7 @@ impl GameState {
                     returning = true;
                 }
 
-                if pos < 62
+                if pos < 60
                     && piece == *self.board.get_unchecked(pos + 6)
                     && piece == *self.board.get_unchecked(pos + 12)
                 {

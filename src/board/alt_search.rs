@@ -5,9 +5,9 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
-const drop_per_turn: f32 = 0.9;
+const drop_per_turn: f32 = 0.8;
 
-#[derive(Debug)]
+#[derive(Debug, Copy, Clone)]
 pub struct Info {
     pub turn: usize,
     pub score: f32,
@@ -26,6 +26,11 @@ pub struct TurnList {
 }
 
 pub type HashTable = DashMap<u64, HashEntry>;
+
+pub const NULL_MOVE: Info = Info {
+    turn: 0,
+    score: 0.0
+};
 
 #[inline]
 fn search(
@@ -52,8 +57,8 @@ fn search(
         board_hash = Some(hash);
         if let Some(found) = hasher.get(&hash) {
             if found.depth == depth {
-                hash_hits.inc();
 
+                hash_hits.inc();
                 return Info {
                     turn: move_number,
                     score: found.score,
@@ -86,10 +91,19 @@ fn search(
 
     let possible_moves = copy.get_moves();
 
+    let mv_filter = |x: &&usize| -> bool {
+        let x_p = **x % 6;
+        let valid_col = if depth <= 3 { x_p < 4 && x_p > 1} else { x_p < 5 && x_p > 0 };
+        if !valid_col { return false }
+
+
+        if depth <= 3 { **x >= 12 && **x < 48} else { **x >= 6 && **x < 60 }
+    };
+
     let max_score = if depth > 2 {
         possible_moves
             .par_iter()
-            //.filter(|x| **x >= 6 && **x < 66)
+            .filter(mv_filter)
             .map(|i| {
                 search(
                     &copy,
@@ -105,11 +119,11 @@ fn search(
                 .score
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
-            .unwrap()
+            .unwrap_or(0.0)
     } else {
         possible_moves
             .iter()
-            //.filter(|x| **x >= 6 && **x < 66)
+            .filter(mv_filter)
             .map(|i| {
                 search(
                     &copy,
@@ -125,7 +139,7 @@ fn search(
                 .score
             })
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
-            .unwrap()
+            .unwrap_or(0.0)
     };
 
     if let Some(key) = board_hash {
