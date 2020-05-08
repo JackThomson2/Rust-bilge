@@ -29,7 +29,7 @@ pub type HashTable = DashMap<u64, HashEntry>;
 
 pub const NULL_MOVE: Info = Info {
     turn: 0,
-    score: 0.0
+    score: 0.0,
 };
 
 #[inline]
@@ -38,13 +38,10 @@ fn search(
     max_depth: u8,
     depth: u8,
     move_number: usize,
-    moves: i8,
-    min_move: u8,
     cntr: &atomic_counter::RelaxedCounter,
     hasher: &HashTable,
     hash_hits: &atomic_counter::RelaxedCounter,
 ) -> Info {
-    let moves_made = 1.1; // ((max_depth - depth) + 1) as f32;
     let mut copy = *board;
     cntr.inc();
     let score = copy.swap(move_number);
@@ -57,7 +54,6 @@ fn search(
         board_hash = Some(hash);
         if let Some(found) = hasher.get(&hash) {
             if found.depth == depth {
-
                 hash_hits.inc();
                 return Info {
                     turn: move_number,
@@ -74,70 +70,38 @@ fn search(
         };
     }
 
-    if false && !copy.something_cleared {
-        if moves >= 4 || (true && min_move >= move_number as u8) {
-            return Info {
-                turn: move_number,
-                score,
-            };
-        }
-    }
-
-    let (moves, min_move) = if !copy.something_cleared {
-        (moves + 1, std::cmp::max(min_move, move_number as u8))
-    } else {
-        (0, std::u8::MIN)
-    };
-
     let possible_moves = copy.get_moves();
 
     let mv_filter = |x: &&usize| -> bool {
         let x_p = **x % 6;
-        let valid_col = if depth <= 3 { x_p < 4 && x_p > 1} else { x_p < 5 && x_p > 0 };
-        if !valid_col { return false }
+        let valid_col = if depth <= 3 {
+            x_p < 4 && x_p > 1
+        } else {
+            x_p < 5 && x_p > 0
+        };
+        if !valid_col {
+            return false;
+        }
 
-
-        if depth <= 3 { **x >= 12 && **x < 48} else { **x >= 6 && **x < 60 }
+        if depth <= 3 {
+            **x >= 12 && **x < 48
+        } else {
+            **x >= 6 && **x < 60
+        }
     };
 
     let max_score = if depth > 2 {
         possible_moves
             .par_iter()
             .filter(mv_filter)
-            .map(|i| {
-                search(
-                    &copy,
-                    max_depth,
-                    depth - 1,
-                    *i,
-                    moves,
-                    min_move,
-                    &cntr,
-                    &hasher,
-                    &hash_hits,
-                )
-                .score
-            })
+            .map(|i| search(&copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     } else {
         possible_moves
             .iter()
             .filter(mv_filter)
-            .map(|i| {
-                search(
-                    &copy,
-                    max_depth,
-                    depth - 1,
-                    *i,
-                    moves,
-                    min_move,
-                    &cntr,
-                    &hasher,
-                    &hash_hits,
-                )
-                .score
-            })
+            .map(|i| search(&copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     };
@@ -204,8 +168,6 @@ pub fn find_best_move_list(
                 depth,
                 depth,
                 *testing,
-                0,
-                std::u8::MIN,
                 &cntr,
                 &hash_table,
                 &hash_hits,
