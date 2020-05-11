@@ -57,6 +57,7 @@ pub fn move_to_int(move_num: &Move) -> usize {
 }
 
 impl GameState {
+    #[inline]
     pub fn as_dani_string(&self) -> String {
         self.board
             .iter()
@@ -178,6 +179,7 @@ impl GameState {
     #[inline]
     pub fn swap(&mut self, pos: usize) -> f32 {
         self.something_cleared = false;
+        let mut y_height = 0;
         if pos >= 71 || x_pos!(pos) == 5 {
             return -9001.0;
         }
@@ -203,7 +205,8 @@ impl GameState {
             return_score = self.clear_count as f32;
             self.remove_clears();
             self.shift_everything();
-            self.something_cleared = true
+            self.something_cleared = true;
+            y_height = std::cmp::min(11, y_pos!(pos) + 1);
         } else if one == JELLYFISH || two == JELLYFISH {
             if one == JELLYFISH {
                 self.jelly(two);
@@ -214,20 +217,23 @@ impl GameState {
 
             self.remove_clears();
             self.shift_everything();
-            self.something_cleared = true
+            self.something_cleared = true;
+            y_height = 11;
         } else {
-            self.board[pos] = two;
-            self.board[pos + 1] = one;
+            unsafe {
+                *self.board.get_unchecked_mut(pos) = two;
+                *self.board.get_unchecked_mut(pos + 1) = one;
+            }
 
-            let mut score = self.get_combo(pos) as f32;
+            let mut score = self.get_combo(pos, &two, &one) as f32;
             if score > 0.0 {
-                score += self.clean_board();
+                score += self.clean_board(y_pos!(pos));
             }
             return score;
         }
 
         if self.something_cleared {
-            return_score += self.clean_board();
+            return_score += self.clean_board(y_height);
         }
 
         return_score
@@ -258,77 +264,86 @@ impl GameState {
     }
 
     #[inline]
-    pub fn clean_board(&mut self) -> f32 {
+    pub fn clean_board(&mut self, max_y: usize) -> f32 {
         let mut extra_broken = 0.0;
-        let mut clear_res = self.mark_clears();
+        let mut clear_res = self.mark_clears(max_y);
 
         while clear_res.0 {
             extra_broken += self.clear_count as f32;
             extra_broken += clear_res.1;
             self.remove_clears();
             self.shift_everything();
-            clear_res = self.mark_clears();
+            clear_res = self.mark_clears(clear_res.2);
         }
 
         extra_broken
     }
 
     #[inline]
-    fn mark_clears(&mut self) -> (bool, f32) {
+    fn mark_clears(&mut self, max_y: usize) -> (bool, f32, usize) {
         let mut returning = false;
         let mut bonus_score = 0.0;
+        let mut highest = 0;
+        let mut past_water = false;
 
-        for (pos, piece) in self.board.iter().enumerate() {
-            let piece = *piece;
-            let x = x_pos!(pos);
-            let y = y_pos!(pos);
+        for y in 0..max_y + 1 {
+            if !past_water && y > self.water_level {
+                past_water = true;
+            }
 
-            let board_size = 72;
+            for x in 0..6 {
+                let pos = x + (y * 6);
+                let piece = unsafe {*self.board.get_unchecked(pos)};
 
-            if y > self.water_level && piece == CRAB {
+                if past_water && piece == CRAB {
+                    unsafe {
+                        *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
+                    }
+                    self.clear_count += 1;
+                    returning = true;
+                    bonus_score += (self.water_level * 2) as f32;
+
+                    highest = y;
+                    continue;
+                }
+    
+                if !can_move(piece) {
+                    continue;
+                }
+    
                 unsafe {
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                }
-                self.clear_count += 1;
-                returning = true;
-                bonus_score += (self.water_level * 2) as f32;
+                    if x < 4
+                        && piece == *self.board.get_unchecked(pos + 1)
+                        && piece == *self.board.get_unchecked(pos + 2)
+                    {
+                        *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
+                        *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 1;
+                        *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 2;
+                        self.clear_count += 3;
 
-                continue;
-            }
+                        highest = y;
+    
+                        returning = true;
+                    }
+    
+                    if pos < 60
+                        && piece == *self.board.get_unchecked(pos + 6)
+                        && piece == *self.board.get_unchecked(pos + 12)
+                    {
+                        *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
+                        *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 6;
+                        *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 12;
+                        self.clear_count += 3;
 
-            if !can_move(piece) {
-                continue;
-            }
-
-            unsafe {
-                if x < 4
-                    && pos < board_size - 2
-                    && piece == *self.board.get_unchecked(pos + 1)
-                    && piece == *self.board.get_unchecked(pos + 2)
-                {
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 1;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 2;
-                    self.clear_count += 3;
-
-                    returning = true;
-                }
-
-                if pos < 60
-                    && piece == *self.board.get_unchecked(pos + 6)
-                    && piece == *self.board.get_unchecked(pos + 12)
-                {
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 6;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 12;
-                    self.clear_count += 3;
-
-                    returning = true;
+                        highest = y + 3;
+    
+                        returning = true;
+                    }
                 }
             }
         }
 
-        (returning, bonus_score)
+        (returning, bonus_score, highest)
     }
 
     #[inline]
@@ -355,11 +370,8 @@ impl GameState {
     }
 
     #[inline]
-    fn get_combo(&self, pos: usize) -> i32 {
+    fn get_combo(&self, pos: usize, left_piece: &Pieces, right_piece: &Pieces) -> i32 {
         let x = x_pos!(pos);
-
-        let left_piece = unsafe { self.board.get_unchecked(pos) };
-        let right_piece = unsafe { self.board.get_unchecked(pos + 1) };
 
         let mut left = 1; //left 3 pieces
         let mut l_col = 1; //left column of 5 pieces
@@ -437,27 +449,14 @@ impl GameState {
         if mult_ct == 0 {
             return 0;
         }
-        /*
-        if mult_ct == 2 {
-            return 2;
-        }
-        if mult_ct == 3 {
-            return 25;
-        }
-        if mult_ct == 4 {
-            return 100;
-        } */
+
         if mult_ct == 4 && (r_col == 5 && l_col == 5) {
-            return 9999999; // Minus to give space for other points
+            return 9999999; 
         }
 
         if mult_ct == 4 && (r_col == 5 || l_col == 5) {
-            return 999999; // Minus to give space for other points
+            return 999999;
         }
-
-        /*if mult_ct == 5 {
-            return 400;
-        }*/
 
         (row_score!(left) + row_score!(right) + row_score!(l_col) + row_score!(r_col))
             * promote_scorers!(mult_ct)

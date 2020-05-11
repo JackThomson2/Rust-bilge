@@ -18,9 +18,9 @@ fn main() {
         game.draw();
 
         let now = Instant::now();
-        let moving = board::alt_search::find_best_move_list(&game, 8, true, &hash_table);
+        let moving = board::alt_search::find_best_move_list(&game, 6, true, &hash_table);
 
-        println!("Turns {:?}", &moving.turns[..]);
+        // println!("Turns {:?}", &moving.turns[..]);
 
         let moving = moving.turns.get(0).unwrap();
         let dani_move = move_to_dani_move(moving.turn);
