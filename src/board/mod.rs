@@ -2,7 +2,7 @@ pub mod alt_search;
 pub mod defs;
 pub mod searcher;
 
-use seahash;
+use std::collections::HashSet;
 
 #[macro_use]
 pub mod helpers;
@@ -11,8 +11,12 @@ use colored::*;
 use defs::Pieces::{self, *};
 use helpers::can_move;
 
+type col_set = HashSet<usize>;
+
 use arrayvec::ArrayVec;
 use rand::Rng;
+
+type PieceArray = ArrayVec<[usize; 72]>;
 
 #[derive(Copy, Clone, Debug)]
 pub struct Move {
@@ -227,7 +231,14 @@ impl GameState {
 
             let mut score = self.get_combo(pos, &two, &one) as f32;
             if score > 0.0 {
-                score += self.clean_board(y_pos!(pos));
+
+                let mut testing: PieceArray = ArrayVec::new();
+                unsafe {
+                    testing.push_unchecked(pos);
+                    testing.push_unchecked(pos + 1);
+                }
+
+                score += self.clean_board_vecaro(testing);
             }
             return score;
         }
@@ -277,6 +288,128 @@ impl GameState {
         }
 
         extra_broken
+    }
+
+    #[inline]
+    pub fn clean_board_vecaro(&mut self, clearing: ArrayVec<[usize; 72]>) -> f32 {
+        let mut extra_broken = 0.0;
+        let mut clearing = clearing;
+        let mut clear_res = self.clear_vec(&clearing);
+
+        while clear_res.0 {
+            extra_broken += self.clear_count as f32;
+            extra_broken += clear_res.1;
+            self.remove_clears();
+            clearing = self.shift_everything_vecaro(clear_res.2);
+            clear_res = self.clear_vec(&clearing);
+        }
+
+        extra_broken
+    }
+
+    #[inline]
+    fn clear_vec(&mut self, to_clear: &ArrayVec<[usize; 72]>) -> (bool, f32, col_set) {
+        let mut returning = false;
+        let mut bonus_score = 0f32;
+        let mut cols = HashSet::with_capacity(6);
+
+        for pce in to_clear {
+            let x = x_pos!(pce);
+            let y = y_pos!(pce);
+            let piece = unsafe { *self.board.get_unchecked(*pce) };
+
+            if y > self.water_level && piece == CRAB {
+                unsafe {
+                    *self.to_clear.get_unchecked_mut(self.clear_count) = *pce;
+                }
+                self.clear_count += 1;
+                returning = true;
+                bonus_score += (self.water_level * 2) as f32;
+
+                cols.insert(x);
+                continue;
+            }
+
+            if !can_move(piece) {
+                continue;
+            }
+
+            let mut left = 0;
+            let mut right = 0;
+            let mut up = 0;
+            let mut down = 0;
+
+            unsafe {
+                if x > 0 && piece ==  *self.board.get_unchecked(pce - 1) {
+                    left += 1;
+                    if x > 1 && piece ==  *self.board.get_unchecked(pce - 2) {
+                        left += 1;
+                    }
+                }
+
+                if x < 5 && piece ==  *self.board.get_unchecked(pce + 1) {
+                    right += 1;
+                    if x < 4 && piece ==  *self.board.get_unchecked(pce + 2) {
+                        right += 1;
+                    }
+                }
+
+                if y > 0 && piece ==  *self.board.get_unchecked(pce - 6) {
+                    down += 1;
+                    if y > 1 && piece ==  *self.board.get_unchecked(pce - 12) {
+                        down += 1;
+                    }
+                }
+
+                if y < 11 && piece ==  *self.board.get_unchecked(pce + 6) {
+                    down += 1;
+                    if x < 10 && piece ==  *self.board.get_unchecked(pce + 12) {
+                        down += 1;
+                    }
+                }
+
+                if left + right >= 2 {
+                    cols.insert(x);
+                    returning = true;
+                    if left > 0 {
+                        for left_cnt in 1..left+1 {
+                            *self.to_clear.get_unchecked_mut(self.clear_count) = pce - left_cnt;
+                            self.clear_count += 1;
+
+                            cols.insert(pce - left_cnt);
+                        }
+                    }
+
+                    if right > 0 {
+                        for right_cnt in 1..right+1 {
+                            *self.to_clear.get_unchecked_mut(self.clear_count) = pce + right_cnt;
+                            self.clear_count += 1;
+                            cols.insert(pce + right_cnt);
+                        }
+                    }
+                }
+    
+                if up + down >= 2 {
+                    cols.insert(x);
+                    returning = true;
+                    if down > 0 {
+                        for down_cnt in 1..down+1 {
+                            *self.to_clear.get_unchecked_mut(self.clear_count) = pce - (down_cnt * 6);
+                            self.clear_count += 1;
+                        }
+                    }
+
+                    if up > 0 {
+                        for up_cnt in 1..up+1 {
+                            *self.to_clear.get_unchecked_mut(self.clear_count) = pce + (up_cnt * 6);
+                            self.clear_count += 1;
+                        }
+                    }
+                }
+            }
+        }
+
+        (returning, bonus_score, cols)
     }
 
     #[inline]
@@ -367,6 +500,35 @@ impl GameState {
                 }
             }
         }
+    }
+
+    #[inline]
+    fn shift_everything_vecaro(&mut self, columns: col_set) -> ArrayVec<[usize; 72]> {
+        let mut to_test = ArrayVec::new();
+
+        for x in columns.iter() {
+            let mut last = 99999;
+            for y in (0..12).rev() {
+                let pos = (y * 6) + x;
+                unsafe {
+                    let checking = *self.board.get_unchecked(pos);
+                    if checking == CLEARED && last == 99999 {
+                        last = y;
+                    }
+
+                    if last != 99999 && checking != CLEARED {
+                        let last_pos = (last * 6) + x;
+                        *self.board.get_unchecked_mut(last_pos) = checking;
+                        to_test.push_unchecked(last_pos);
+
+                        *self.board.get_unchecked_mut(pos) = CLEARED;
+                        last -= 1;
+                    }
+                }
+            }
+        }
+
+        to_test
     }
 
     #[inline]
