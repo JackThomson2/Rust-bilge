@@ -17,10 +17,12 @@ impl GameState {
             .collect()
     }
 
+    #[inline]
     pub fn draw(&self) {
         self.draw_highlight(99);
     }
 
+    #[inline]
     pub fn draw_highlight(&self, position: usize) {
         println!();
 
@@ -44,6 +46,7 @@ impl GameState {
         println!();
     }
 
+    #[inline]
     pub fn remove_clears(&mut self) {
         if self.clear_count == 0 {
             return;
@@ -211,6 +214,7 @@ impl GameState {
         move_vec
     }
 
+    #[inline]
     pub fn clean_board(&mut self) -> f32 {
         let mut extra_broken = 0.0;
         let mut clear_res = self.mark_clears();
@@ -226,6 +230,7 @@ impl GameState {
         extra_broken
     }
 
+    #[inline]
     fn mark_clears(&mut self) -> (bool, f32) {
         let mut returning = false;
         let mut bonus_score = 0.0;
@@ -283,6 +288,7 @@ impl GameState {
         (returning, bonus_score)
     }
 
+    #[inline]
     fn shift_everything(&mut self) {
         for x in 0..6 {
             let mut last = 99999;
@@ -305,6 +311,7 @@ impl GameState {
         }
     }
 
+    #[inline]
     fn get_combo(&self, pos: usize) -> i32 {
         let x = x_pos!(pos);
 

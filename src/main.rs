@@ -11,7 +11,7 @@ static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-    let hash_table: HashTable = dashmap::DashMap::new();
+    let mut hash_table: HashTable = dashmap::DashMap::with_capacity(40_000_000);
 
     if args.len() == 1 {
         let game = board::generate_rand_board();
@@ -44,6 +44,7 @@ fn main() {
         let game = board::board_from_str(&args[1], water_level);
         let best_move = board::searcher::find_best_move(&game, depth, false, &hash_table);
         let dani_move = move_to_dani_move(best_move.turn);
+
         println!(
             "{} {} ran at depth {}, {}",
             dani_move, best_move.score, depth, best_move.info_str
@@ -99,7 +100,7 @@ fn main() {
 
             last_board = game.hash_board();
             input = String::new();
-            hash_table.clear();
+            hash_table = dashmap::DashMap::with_capacity(40_000_000);
         }
     }
 }

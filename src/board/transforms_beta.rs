@@ -2,6 +2,7 @@ use crate::board::*;
 use defs::Pieces::*;
 
 impl GameState {
+    #[inline]
     pub fn clean_board_beta(&mut self, moves: &mut PositionTracker) -> f32 {
         let mut extra_broken = 0.0;
         let mut clear_res = self.mark_clears_targetted(moves);
@@ -17,6 +18,7 @@ impl GameState {
         extra_broken
     }
 
+    #[inline]
     fn shift_tracked(&mut self, found: &mut PositionTracker) {
         found.clear();
 
@@ -44,6 +46,7 @@ impl GameState {
     }
 
     /// Alternative to mark clears which will check around a point
+    #[inline]
     fn mark_clears_targetted(&mut self, checking: &PositionTracker) -> (bool, f32) {
         let mut returning = false;
         let mut bonus_score = 0.0;
