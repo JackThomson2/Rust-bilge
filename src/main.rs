@@ -4,7 +4,7 @@ use board::helpers::move_to_dani_move;
 use std::env;
 use std::time::Instant;
 
-use board::alt_search::HashTable;
+use board::searcher::HashTable;
 
 #[global_allocator]
 static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
@@ -18,7 +18,7 @@ fn main() {
         game.draw();
 
         let now = Instant::now();
-        let moving = board::alt_search::find_best_move_list(&game, 8, true, &hash_table);
+        let moving = board::searcher::find_best_move_list(&game, 6, true, &hash_table);
 
         println!("Turns {:?}", &moving.turns[..]);
 
@@ -42,7 +42,7 @@ fn main() {
         let depth = u8::from_str_radix(&args[2], 10).unwrap();
 
         let game = board::board_from_str(&args[1], water_level);
-        let best_move = board::alt_search::find_best_move(&game, depth, false, &hash_table);
+        let best_move = board::searcher::find_best_move(&game, depth, false, &hash_table);
         let dani_move = move_to_dani_move(best_move.turn);
         println!(
             "{} {} ran at depth {}, {}",
@@ -67,8 +67,7 @@ fn main() {
             let depth = u8::from_str_radix(&commands[1], 10).unwrap();
 
             let game = board::board_from_str(&commands[0], water_level);
-            let best_moves =
-                board::alt_search::find_best_move_list(&game, depth, false, &hash_table);
+            let best_moves = board::searcher::find_best_move_list(&game, depth, false, &hash_table);
             let mut best_move = None;
 
             let mut saved_double_move = false;

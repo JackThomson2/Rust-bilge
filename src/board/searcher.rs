@@ -1,117 +1,197 @@
 use crate::board::GameState;
 use atomic_counter::AtomicCounter;
+use dashmap::DashMap;
+use rayon::prelude::*;
+use std::cmp::Ordering;
 use std::sync::Arc;
-use std::thread::spawn;
 
-#[derive(Debug)]
+const drop_per_turn: f32 = 0.8;
+
+#[derive(Debug, Copy, Clone)]
 pub struct Info {
     pub turn: usize,
-    score: i32,
+    pub score: f32,
 }
 
+#[derive(Debug)]
+pub struct TurnInfo {
+    pub turn: usize,
+    pub score: f32,
+    pub info_str: String,
+}
+
+pub struct TurnList {
+    pub turns: Vec<Info>,
+    pub info_str: String,
+}
+
+pub type HashTable = DashMap<u64, HashEntry>;
+
+pub const NULL_MOVE: Info = Info {
+    turn: 0,
+    score: 0.0,
+};
+
 #[inline]
-fn dani_search(
+fn search(
     board: &GameState,
+    max_depth: u8,
     depth: u8,
     move_number: usize,
-    moves: i8,
-    min_move: u8,
     cntr: &atomic_counter::RelaxedCounter,
+    hasher: &HashTable,
+    hash_hits: &atomic_counter::RelaxedCounter,
 ) -> Info {
     let mut copy = *board;
     cntr.inc();
+    let score = copy.swap(move_number);
 
-    let score = copy.swap(move_number) as i32;
+    let hash_table_range = (max_depth - depth) <= 4;
 
-    if depth == 1 {
-        let scorz = 10;
-        return Info {
-            turn: move_number,
-            score: score + scorz,
-        };
+    let mut board_hash = None;
+    if hash_table_range {
+        let hash = copy.hash_board();
+        board_hash = Some(hash);
+        if let Some(found) = hasher.get(&hash) {
+            if found.depth == depth {
+                hash_hits.inc();
+                return Info {
+                    turn: move_number,
+                    score: found.score,
+                };
+            }
+        }
     }
-    let mut moves = moves;
-    let mut min_move = min_move;
 
-    if score < 0 {
+    if score < 0.0 || depth == 1 {
         return Info {
             turn: move_number,
             score,
         };
     }
 
-    if !copy.something_cleared {
-        if moves >= 3 {
-            return Info {
-                turn: move_number,
-                score,
-            };
+    let possible_moves = copy.get_moves();
+
+    let mv_filter = |x: &&usize| -> bool {
+        let x_p = **x % 6;
+        let valid_col = if depth <= 3 {
+            x_p < 4 && x_p > 1
+        } else {
+            x_p < 5 && x_p > 0
         };
 
-        if moves >= 0 && min_move >= move_number as u8 {
-            return Info {
-                turn: move_number,
-                score,
-            };
+        if !valid_col {
+            return false;
         }
-        moves += 1;
-        min_move = std::cmp::min(min_move, move_number as u8);
-    } else {
-        moves = 0;
-        min_move = std::u8::MAX;
-    }
 
-    let possible_moves = copy.get_moves();
-    let max_score = possible_moves
-        .iter()
-        .filter(|x| **x >= 10 && **x < 47)
-        .map(|i| dani_search(&copy, depth - 1, 72 - i, moves, min_move, cntr).score)
-        .max()
-        .unwrap();
+        if depth <= 3 {
+            **x >= 12 && **x < 48
+        } else {
+            **x >= 6 && **x < 60
+        }
+    };
+
+    let max_score = if depth > 2 {
+        possible_moves
+            .par_iter()
+            .filter(mv_filter)
+            .map(|i| search(&copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
+            .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
+            .unwrap_or(0.0)
+    } else {
+        possible_moves
+            .iter()
+            .filter(mv_filter)
+            .map(|i| search(&copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
+            .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
+            .unwrap_or(0.0)
+    };
+
+    if let Some(key) = board_hash {
+        hasher.insert(
+            key,
+            HashEntry {
+                score: score + (max_score * drop_per_turn),
+                depth,
+            },
+        );
+    }
 
     Info {
         turn: move_number,
-        score: (score as f32 + (max_score as f32) * 0.9) as i32,
+        score: (score) + (max_score * drop_per_turn),
     }
 }
 
-pub fn find_best_move(board: &GameState) -> Info {
-    // println!("Finding best move");
-    let depth = 3;
+pub struct HashEntry {
+    score: f32,
+    depth: u8,
+}
 
+#[inline]
+pub fn find_best_move(
+    board: &GameState,
+    depth: u8,
+    verbose: bool,
+    hash_table: &HashTable,
+) -> TurnInfo {
+    let move_list = find_best_move_list(board, depth, verbose, hash_table);
+    let best_move = move_list.turns.get(0).unwrap();
+
+    let info_str = format!(
+        "{}, best move {} with score {}",
+        move_list.info_str, best_move.turn, best_move.score
+    );
+
+    TurnInfo {
+        turn: best_move.turn,
+        score: best_move.score,
+        info_str,
+    }
+}
+
+#[inline]
+pub fn find_best_move_list(
+    board: &GameState,
+    depth: u8,
+    verbose: bool,
+    hash_table: &HashTable,
+) -> TurnList {
     let possible_moves = board.get_moves();
     let cntr = Arc::new(atomic_counter::RelaxedCounter::new(0));
+    let hash_hits = Arc::new(atomic_counter::RelaxedCounter::new(0));
 
-    let mut best_scoring = Info {
-        score: std::i32::MIN,
-        turn: 0,
-    };
+    let mut best_move: Vec<Info> = possible_moves
+        .par_iter()
+        .map(|testing| {
+            search(
+                &board,
+                depth,
+                depth,
+                *testing,
+                &cntr,
+                &hash_table,
+                &hash_hits,
+            )
+        })
+        .collect();
 
-    let mut children = Vec::with_capacity(possible_moves.len());
+    best_move.sort_unstable_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
 
-    for testing in possible_moves {
-        let test_board = *board;
-        let cnt = cntr.clone();
-
-        children.push(spawn(move || {
-            dani_search(&test_board.clone(), depth, testing, -1, std::u8::MAX, &cnt)
-        }));
+    if verbose {
+        println!(
+            "Searched {} positions, {} hash hits",
+            cntr.get(),
+            hash_hits.get(),
+        );
     }
 
-    for child in children {
-        let res = child.join().unwrap();
-
-        if res.score > best_scoring.score {
-            best_scoring = res;
-        }
+    TurnList {
+        turns: best_move,
+        info_str: format!(
+            "Searched {} positions, {} hash hits.",
+            cntr.get(),
+            hash_hits.get()
+        ),
     }
-
-    /*println!(
-        "Best move at depth {} found {:#?} num of calcs {}",
-        depth,
-        best_scoring,
-        cntr.get()
-    );*/
-
-    best_scoring
 }
