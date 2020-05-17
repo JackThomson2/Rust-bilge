@@ -1,4 +1,8 @@
+use std::collections::HashSet;
+
 pub const WIDTH: i16 = 6;
+pub type MoveSet = HashSet<usize>;
+pub type ColSet = HashSet<usize>;
 
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
 #[repr(u8)]

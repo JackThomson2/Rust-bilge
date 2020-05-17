@@ -44,7 +44,7 @@ impl GameState {
         println!();
     }
 
-    fn remove_clears(&mut self) {
+    pub fn remove_clears(&mut self) {
         if self.clear_count == 0 {
             return;
         }
@@ -171,8 +171,11 @@ impl GameState {
             self.board[pos + 1] = one;
 
             let mut score = self.get_combo(pos) as f32;
+
+            let mut moves = NewTracker(pos);
+
             if score > 0.0 {
-                score += self.clean_board();
+                score += self.clean_board_beta(&mut moves);
             }
             return score;
         }

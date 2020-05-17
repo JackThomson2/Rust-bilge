@@ -10,6 +10,8 @@ edition = "2018"
 atomic-counter = "1"
 rand = "*"
 hashbrown = "0.7"
+bit-array = "0.4"
+typenum = "1.4"
 num_cpus = "1.1"
 dashmap = "3"
 colored = { git = "https://github.com/tforgione/colored" }
@@ -32,15 +34,3 @@ debug = true
 [[bin]]
 name = "bilgebot"
 path = "src/main.rs"
-
-[profile.bench]
-opt-level = 3
-codegen-units = 1
-lto = "fat"
-
-[dev-dependencies]
-#criterion = "0.3"
-
-[[bench]]
-name = "par_search"
-harness = false
