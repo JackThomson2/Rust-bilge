@@ -1,1 +1,1 @@
-pub const MaxDepth: u8 = 8;
+pub const MAX_DEPTH: u8 = 8;

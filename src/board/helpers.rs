@@ -1,9 +1,10 @@
-use crate::board::defs::{Pieces::*, *};
+use crate::board::defs::*;
 use crate::board::Move;
 
 #[inline(always)]
 pub fn can_move(piece: Pieces) -> bool {
-    piece != CRAB && piece != JELLYFISH && piece != PUFFERFISH && piece != CLEARED
+    // Special pieces are all 7 or above (saves multiple checks)
+    (piece as u8) < 7
 }
 
 macro_rules! x_pos {

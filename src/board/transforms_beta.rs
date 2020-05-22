@@ -9,11 +9,9 @@ impl GameState {
         let mut clear_res = self.mark_clears_targetted(moves);
 
         while clear_res.0 {
-            extra_broken += self.clear_count as f32;
-            extra_broken += clear_res.1;
-            let scope = self.remove_clears_tracker();
+            extra_broken += clear_res.1 + self.clear_count as f32;
 
-            if let Some(scope) = scope {
+            if let Some(scope) = self.remove_clears_tracker() {
                 self.shift_tracked(moves, &scope);
                 clear_res = self.mark_clears_targetted(moves);
             } else {

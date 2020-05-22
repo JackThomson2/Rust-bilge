@@ -7,17 +7,17 @@ pub type ColSet = HashSet<usize>;
 #[derive(PartialEq, Eq, Clone, Copy, Hash)]
 #[repr(u8)]
 pub enum Pieces {
-    CLEARED = 0,
-    BluePentagon = 1,
-    GreenSquare = 2,
-    BlueCircle = 3,
-    BreenOctagon = 4,
-    DarkBlueSquare = 5,
-    PaleCircle = 6,
-    WavySquare = 7,
-    CRAB = 8,
-    PUFFERFISH = 9,
-    JELLYFISH = 10,
+    BluePentagon = 0,
+    GreenSquare = 1,
+    BlueCircle = 2,
+    BreenOctagon = 3,
+    DarkBlueSquare = 4,
+    PaleCircle = 5,
+    WavySquare = 6,
+    CRAB = 7,
+    PUFFERFISH = 8,
+    JELLYFISH = 9,
+    CLEARED = 10,
     NULL = 255,
 }
 
@@ -30,22 +30,22 @@ pub fn str_to_enum(input: &str) -> Vec<Pieces> {
 }
 
 pub fn dani_mapper(val: i16) -> Pieces {
-    piece_from_num(val + 1)
+    piece_from_num(val)
 }
 
 pub fn piece_from_num(val: i16) -> Pieces {
     match val {
-        0 => Pieces::CLEARED,
-        1 => Pieces::BluePentagon,
-        2 => Pieces::GreenSquare,
-        3 => Pieces::BlueCircle,
-        4 => Pieces::BreenOctagon,
-        5 => Pieces::DarkBlueSquare,
-        6 => Pieces::PaleCircle,
-        7 => Pieces::WavySquare,
-        8 => Pieces::CRAB,
-        9 => Pieces::PUFFERFISH,
-        10 => Pieces::JELLYFISH,
+        0 => Pieces::BluePentagon,
+        1 => Pieces::GreenSquare,
+        2 => Pieces::BlueCircle,
+        3 => Pieces::BreenOctagon,
+        4 => Pieces::DarkBlueSquare,
+        5 => Pieces::PaleCircle,
+        6 => Pieces::WavySquare,
+        7 => Pieces::CRAB,
+        8 => Pieces::PUFFERFISH,
+        9 => Pieces::JELLYFISH,
+        10 => Pieces::CLEARED,
         _ => Pieces::NULL,
     }
 }

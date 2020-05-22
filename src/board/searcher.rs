@@ -5,7 +5,7 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
-const drop_per_turn: f32 = 0.8;
+const DROP_PER_TURN: f32 = 0.8;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Info {
@@ -111,7 +111,7 @@ fn search(
         hasher.insert(
             key,
             HashEntry {
-                score: score + (max_score * drop_per_turn),
+                score: score + (max_score * DROP_PER_TURN),
                 depth,
             },
         );
@@ -119,7 +119,7 @@ fn search(
 
     Info {
         turn: move_number,
-        score: (score) + (max_score * drop_per_turn),
+        score: (score) + (max_score * DROP_PER_TURN),
     }
 }
 

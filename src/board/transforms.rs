@@ -132,14 +132,11 @@ impl GameState {
     #[inline]
     pub fn swap(&mut self, pos: usize) -> f32 {
         self.something_cleared = false;
-        if pos >= 71 || x_pos!(pos) == 5 {
-            return -9001.0;
-        }
 
         let one = unsafe { *self.board.get_unchecked(pos) };
         let two = unsafe { *self.board.get_unchecked(pos + 1) };
 
-        let mut return_score = 0.0;
+        let mut return_score: f32;
 
         if one == CLEARED || two == CLEARED {
             return -20001.0;
@@ -170,12 +167,12 @@ impl GameState {
             self.shift_everything();
             self.something_cleared = true
         } else {
-            self.board[pos] = two;
-            self.board[pos + 1] = one;
+            unsafe { *self.board.get_unchecked_mut(pos) = two };
+            unsafe { *self.board.get_unchecked_mut(pos + 1) = one };
 
             let mut score = self.get_combo(pos) as f32;
 
-            let mut moves = NewTracker(pos);
+            let mut moves = new_tracker(pos);
 
             if score > 0.0 {
                 score += self.clean_board_beta(&mut moves);
@@ -200,12 +197,12 @@ impl GameState {
             }
 
             let left = *pieces;
-            if left == CLEARED || left == NULL {
+            if left == CLEARED || left == NULL || left == CRAB {
                 continue;
             }
 
             let right = unsafe { *self.board.get_unchecked(pos + 1) };
-            if right == CLEARED || right == NULL || right == left {
+            if right == CLEARED || right == NULL || right == CRAB || right == left {
                 continue;
             }
             unsafe { move_vec.push_unchecked(pos) };

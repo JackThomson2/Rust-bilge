@@ -31,7 +31,7 @@ impl PositionTracker {
 }
 
 #[inline]
-pub fn NewTracker(pos: usize) -> PositionTracker {
+pub fn new_tracker(pos: usize) -> PositionTracker {
     let mut new_tracker: PositionArr = BitArray::from_elem(false);
     new_tracker.set(pos, true);
     new_tracker.set(pos + 1, true);

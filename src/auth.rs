@@ -9,6 +9,7 @@ use block_modes::{BlockMode, Cbc};
 
 type Aes256Cbc = Cbc<Aes128, Pkcs7>;
 
+#[allow(non_snake_case, non_camel_case_types)]
 pub fn get_serial_number() -> Result<(), Box<dyn std::error::Error>> {
     let com_con = COMLibrary::new()?;
     let wmi_con = WMIConnection::new(com_con.into())?;
