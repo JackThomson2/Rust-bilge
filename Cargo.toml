@@ -31,7 +31,6 @@ panic = "abort"
 opt-level = 3
 codegen-units = 1
 lto = "fat"
-debug = true
 
 [[bin]]
 name = "bilgebot"

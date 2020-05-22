@@ -20,6 +20,11 @@ impl PositionTracker {
     }
 
     #[inline]
+    pub fn set_invisible(&mut self, position: usize) {
+        self.inner.set(position, false);
+    }
+
+    #[inline]
     pub fn get_inner(&self) -> &PositionArr {
         &self.inner
     }

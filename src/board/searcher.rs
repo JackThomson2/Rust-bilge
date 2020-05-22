@@ -46,7 +46,7 @@ fn search(
     cntr.inc();
     let score = copy.swap(move_number);
 
-    let hash_table_range = (max_depth - depth) <= 4;
+    let hash_table_range = depth > 1;
 
     let mut board_hash = None;
     if hash_table_range {
@@ -74,7 +74,7 @@ fn search(
 
     let mv_filter = |x: &&usize| -> bool {
         let x_p = **x % 6;
-        let valid_col = if depth <= 5 {
+        let valid_col = if depth <= 4 {
             x_p < 4 && x_p > 1
         } else {
             x_p < 5 && x_p > 0
@@ -84,7 +84,7 @@ fn search(
             return false;
         }
 
-        if depth <= 5 {
+        if depth <= 3 {
             **x >= 12 && **x < 48
         } else {
             **x >= 6 && **x < 60

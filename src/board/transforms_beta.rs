@@ -28,11 +28,11 @@ impl GameState {
     fn shift_tracked(&mut self, found: &mut PositionTracker, scope: &ShifterTracked) {
         found.clear();
 
-        let iterable = scope.1.iter().enumerate().filter(|(pos, val)| *val);
+        let iterable = scope.1.iter().enumerate().filter(|(_pos, val)| *val);
 
         for (x, _) in iterable {
             let mut last = 99999;
-            for y in (0..scope.0).rev() {
+            for y in (0..=scope.0).rev() {
                 let pos = (y * 6) + x;
                 unsafe {
                     let checking = *self.board.get_unchecked(pos);
@@ -46,6 +46,7 @@ impl GameState {
                         *self.board.get_unchecked_mut(pos) = CLEARED;
 
                         found.set_visible(last_pos);
+                        found.set_invisible(pos);
                         last -= 1;
                     }
                 }

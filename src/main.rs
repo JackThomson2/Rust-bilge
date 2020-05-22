@@ -20,14 +20,14 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let mut hash_table: HashTable = dashmap::DashMap::with_capacity(40_000_000);
 
-    auth::get_serial_number().unwrap();
+    //auth::get_serial_number().unwrap();
 
     if args.len() == 1 {
-        let game = board::generate_rand_board();
+        let mut game = board::generate_rand_board();
         game.draw();
 
         let now = Instant::now();
-        let moving = board::searcher::find_best_move_list(&game, 6, true, &hash_table);
+        let moving = board::searcher::find_best_move_list(&game, 7, true, &hash_table);
 
         println!("Turns {:?}", &moving.turns[..]);
 
@@ -41,6 +41,8 @@ fn main() {
         );
 
         game.draw_highlight(moving.turn);
+        game.swap(moving.turn);
+        game.draw();
     } else if args.len() == 4 {
         if args[1].len() != 72 {
             println!("We need a string of 72 length, this was {}", args[1].len());
@@ -78,6 +80,7 @@ fn main() {
             let depth = u8::from_str_radix(&commands[1], 10).unwrap();
             let depth = std::cmp::min(depth, MaxDepth);
 
+            let now = Instant::now();
             let game = board::board_from_str(&commands[0], water_level);
             let best_moves = board::searcher::find_best_move_list(&game, depth, false, &hash_table);
             let mut best_move = None;
@@ -105,8 +108,13 @@ fn main() {
 
             let dani_move = move_to_dani_move(best_move.turn);
             println!(
-                "{} {} ran at depth {}, {}. Double move stopped {}",
-                dani_move, best_move.score, depth, best_moves.info_str, saved_double_move
+                "{} {} ran at depth {}, {}. Double move stopped {} took {:?}",
+                dani_move,
+                best_move.score,
+                depth,
+                best_moves.info_str,
+                saved_double_move,
+                now.elapsed()
             );
 
             last_board = game.hash_board();
