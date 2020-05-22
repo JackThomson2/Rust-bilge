@@ -74,7 +74,7 @@ fn search(
 
     let mv_filter = |x: &&usize| -> bool {
         let x_p = **x % 6;
-        let valid_col = if depth <= 3 {
+        let valid_col = if depth <= 5 {
             x_p < 4 && x_p > 1
         } else {
             x_p < 5 && x_p > 0
@@ -84,7 +84,7 @@ fn search(
             return false;
         }
 
-        if depth <= 3 {
+        if depth <= 5 {
             **x >= 12 && **x < 48
         } else {
             **x >= 6 && **x < 60

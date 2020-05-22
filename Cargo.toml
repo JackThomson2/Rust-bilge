@@ -8,6 +8,7 @@ edition = "2018"
 
 [dependencies]
 atomic-counter = "1"
+aes = "0.3"
 rand = "*"
 hashbrown = "0.7"
 bit-array = "0.4"
@@ -15,20 +16,22 @@ typenum = "1.4"
 num_cpus = "1.1"
 dashmap = "4.0.0-rc3"
 colored = { git = "https://github.com/tforgione/colored" }
-scrap = "0.5.0"
-lodepng = "2.0.0"
 uvth = "*"
-aho-corasick = "0.7"
-snmalloc-rs = "0.2"
+mimalloc = { version = "*", default-features = false }
 arrayvec = "0.5"
 seahash = "4"
+wmi = "0.4"
+serde = "*"
 rayon = { git = "https://github.com/nikomatsakis/rayon", branch = "latch-target-thread-2" }
+block-modes = "0.3.3"
+hex-literal = "0.2.1"
 
 [profile.release]
 panic = "abort"
 opt-level = 3
 codegen-units = 1
 lto = "fat"
+debug = true
 
 [[bin]]
 name = "bilgebot"

@@ -1,5 +1,12 @@
+pub mod auth;
 pub mod board;
+pub mod config;
+
+use auth::get_serial_number;
 use board::helpers::move_to_dani_move;
+use config::MaxDepth;
+
+use mimalloc::MiMalloc;
 
 use std::env;
 use std::time::Instant;
@@ -7,11 +14,13 @@ use std::time::Instant;
 use board::searcher::HashTable;
 
 #[global_allocator]
-static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
+static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
     let mut hash_table: HashTable = dashmap::DashMap::with_capacity(40_000_000);
+
+    auth::get_serial_number().unwrap();
 
     if args.len() == 1 {
         let game = board::generate_rand_board();
@@ -40,6 +49,7 @@ fn main() {
 
         let water_level = usize::from_str_radix(&args[3], 10).unwrap();
         let depth = u8::from_str_radix(&args[2], 10).unwrap();
+        let depth = std::cmp::min(depth, MaxDepth);
 
         let game = board::board_from_str(&args[1], water_level);
         let best_move = board::searcher::find_best_move(&game, depth, false, &hash_table);
@@ -66,6 +76,7 @@ fn main() {
 
             let water_level = usize::from_str_radix(&commands[2], 10).unwrap();
             let depth = u8::from_str_radix(&commands[1], 10).unwrap();
+            let depth = std::cmp::min(depth, MaxDepth);
 
             let game = board::board_from_str(&commands[0], water_level);
             let best_moves = board::searcher::find_best_move_list(&game, depth, false, &hash_table);

@@ -1,4 +1,5 @@
 use crate::board::*;
+use bit_array::BitArray;
 use defs::Pieces::*;
 
 impl GameState {
@@ -10,21 +11,28 @@ impl GameState {
         while clear_res.0 {
             extra_broken += self.clear_count as f32;
             extra_broken += clear_res.1;
-            self.remove_clears();
-            self.shift_tracked(moves);
-            clear_res = self.mark_clears_targetted(moves);
+            let scope = self.remove_clears_tracker();
+
+            if let Some(scope) = scope {
+                self.shift_tracked(moves, &scope);
+                clear_res = self.mark_clears_targetted(moves);
+            } else {
+                return extra_broken;
+            }
         }
 
         extra_broken
     }
 
     #[inline]
-    fn shift_tracked(&mut self, found: &mut PositionTracker) {
+    fn shift_tracked(&mut self, found: &mut PositionTracker, scope: &ShifterTracked) {
         found.clear();
 
-        for x in 0..6 {
+        let iterable = scope.1.iter().enumerate().filter(|(pos, val)| *val);
+
+        for (x, _) in iterable {
             let mut last = 99999;
-            for y in (0..12).rev() {
+            for y in (0..scope.0).rev() {
                 let pos = (y * 6) + x;
                 unsafe {
                     let checking = *self.board.get_unchecked(pos);
@@ -43,6 +51,30 @@ impl GameState {
                 }
             }
         }
+    }
+
+    #[inline]
+    pub fn remove_clears_tracker(&mut self) -> Option<ShifterTracked> {
+        if self.clear_count == 0 {
+            return None;
+        }
+
+        let mut max_y = 0;
+        let mut rows: RowArr = BitArray::from_elem(false);
+
+        for count in 0..self.clear_count {
+            unsafe {
+                let loc = self.to_clear.get_unchecked(count);
+                *self.board.get_unchecked_mut(*loc) = CLEARED;
+
+                max_y = std::cmp::max(max_y, y_pos!(loc));
+                rows.set(x_pos!(loc), true);
+            }
+        }
+
+        self.clear_count = 0;
+
+        Some((max_y, rows))
     }
 
     /// Alternative to mark clears which will check around a point
