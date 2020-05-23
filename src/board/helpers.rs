@@ -1,5 +1,6 @@
 use crate::board::defs::*;
 use crate::board::Move;
+use std::ops::Sub;
 
 #[inline(always)]
 pub fn can_move(piece: Pieces) -> bool {
@@ -17,6 +18,15 @@ macro_rules! y_pos {
     ($x:expr) => {
         $x / 6
     };
+}
+
+#[inline]
+pub fn abs_difference<T: Sub<Output = T> + Ord>(x: T, y: T) -> T {
+    if x < y {
+        y - x
+    } else {
+        x - y
+    }
 }
 
 #[inline]

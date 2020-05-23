@@ -5,6 +5,8 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+use crate::board::helpers::abs_difference;
+
 const DROP_PER_TURN: f32 = 0.8;
 
 #[derive(Debug, Copy, Clone)]
@@ -45,6 +47,7 @@ fn search(
     let mut copy = *board;
     cntr.inc();
     let score = copy.swap(move_number);
+    let actual_depth = (max_depth - depth) + 1;
 
     let hash_table_range = depth > 1;
 
@@ -73,8 +76,15 @@ fn search(
     let possible_moves = copy.get_moves();
 
     let mv_filter = |x: &&usize| -> bool {
-        let x_p = **x % 6;
-        let valid_col = if depth <= 4 {
+        let x = **x;
+        let x_p = x % 6;
+
+        // Prevent making the same move again if nothing broke
+        if score == 0.0 && x == move_number {
+            return false;
+        }
+
+        let valid_col = if actual_depth > 3 {
             x_p < 4 && x_p > 1
         } else {
             x_p < 5 && x_p > 0
@@ -84,10 +94,15 @@ fn search(
             return false;
         }
 
-        if depth <= 3 {
-            **x >= 12 && **x < 48
+        // Experimental change, only allow 12 places around the position if nothing broke
+        if score == 0.0 {
+            return abs_difference(x, move_number) <= 12;
+        }
+
+        if actual_depth > 3 {
+            x >= 12 && x < 48
         } else {
-            **x >= 6 && **x < 60
+            x >= 6 && x < 60
         }
     };
 
@@ -107,19 +122,15 @@ fn search(
             .unwrap_or(0.0)
     };
 
+    let score = score + (max_score * DROP_PER_TURN);
+
     if let Some(key) = board_hash {
-        hasher.insert(
-            key,
-            HashEntry {
-                score: score + (max_score * DROP_PER_TURN),
-                depth,
-            },
-        );
+        hasher.insert(key, HashEntry { score, depth });
     }
 
     Info {
         turn: move_number,
-        score: (score) + (max_score * DROP_PER_TURN),
+        score,
     }
 }
 
