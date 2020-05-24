@@ -99,11 +99,17 @@ fn search(
             return abs_difference(x, move_number) <= 12;
         }
 
-        if actual_depth > 3 {
+        let mv_y = y_pos!(move_number);
+        let y_p = y_pos!(x);
+
+        // Allow moves 2 rows above and below after a break;
+        return mv_y > 2 || y_p >= mv_y - 2;
+
+        /*if actual_depth > 3 {
             x >= 12 && x < 48
         } else {
             x >= 6 && x < 60
-        }
+        }*/
     };
 
     let max_score = if depth > 2 {
