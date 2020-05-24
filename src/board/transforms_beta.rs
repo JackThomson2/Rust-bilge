@@ -11,26 +11,21 @@ impl GameState {
         while clear_res.0 {
             extra_broken += clear_res.1 + self.clear_count as f32;
 
-            if let Some(scope) = self.remove_clears_tracker() {
-                self.shift_tracked(moves, &scope);
-                clear_res = self.mark_clears_targetted(moves);
-            } else {
-                return extra_broken;
-            }
+            self.remove_clears();
+            self.shift_tracked(moves);
+            clear_res = self.mark_clears_targetted(moves)
         }
 
         extra_broken
     }
 
     #[inline]
-    fn shift_tracked(&mut self, found: &mut PositionTracker, scope: &ShifterTracked) {
+    fn shift_tracked(&mut self, found: &mut PositionTracker) {
         found.clear();
 
-        let iterable = scope.1.iter().enumerate().filter(|(_pos, val)| *val);
-
-        for (x, _) in iterable {
+        for x in 0..6 {
             let mut last = 99999;
-            for y in (0..=scope.0).rev() {
+            for y in (0..12).rev() {
                 let pos = (y * 6) + x;
                 unsafe {
                     let checking = *self.board.get_unchecked(pos);

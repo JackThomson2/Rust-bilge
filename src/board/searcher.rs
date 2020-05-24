@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::board::helpers::abs_difference;
 
-const DROP_PER_TURN: f32 = 0.8;
+const DROP_PER_TURN: f32 = 0.999;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Info {
@@ -62,6 +62,8 @@ fn search(
                     turn: move_number,
                     score: found.score,
                 };
+            } else if found.depth > depth {
+                board_hash = None;
             }
         }
     }
