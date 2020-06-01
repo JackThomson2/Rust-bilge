@@ -7,7 +7,7 @@ use std::sync::Arc;
 
 use crate::board::helpers::abs_difference;
 
-const DROP_PER_TURN: f32 = 0.999;
+const DROP_PER_TURN: f32 = 0.9;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Info {

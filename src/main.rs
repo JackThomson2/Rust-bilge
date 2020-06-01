@@ -1,8 +1,8 @@
-pub mod auth;
 pub mod board;
 pub mod config;
+pub mod auth;
 
-use auth::get_serial_number;
+use auth::{get_serial_number, dec_string};
 use board::helpers::move_to_dani_move;
 use config::MAX_DEPTH;
 
@@ -17,33 +17,30 @@ use board::searcher::HashTable;
 static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() {
+    dec_string();
+
     let args: Vec<String> = env::args().collect();
-    let mut hash_table: HashTable = dashmap::DashMap::with_capacity(40_000_000);
+    
+    let mut hash_table: HashTable = dashmap::DashMap::with_capacity(20_000_000);
+
+    let authorised = match get_serial_number() {
+        Ok(true) => true,
+        _ => false
+    };
 
     //auth::get_serial_number().unwrap();
 
     if args.len() == 1 {
-        let mut game = board::generate_rand_board();
-        game.draw();
-
-        let now = Instant::now();
-        let moving = board::searcher::find_best_move_list(&game, 7, true, &hash_table);
-
-        println!("Turns {:?}", &moving.turns[..]);
-
-        let moving = moving.turns.get(0).unwrap();
-        let dani_move = move_to_dani_move(moving.turn);
-
-        println!(
-            "Finding best move took {:?} as Dani move {}",
-            now.elapsed(),
-            dani_move
-        );
-
-        game.draw_highlight(moving.turn);
-        game.swap(moving.turn);
-        game.draw();
+        if authorised {
+            println!("You are authenticated!");
+        } else {
+            println!("You are not authorised!");
+        }
     } else if args.len() == 4 {
+        if !authorised {
+            return;
+        }
+
         if args[1].len() != 72 {
             println!("We need a string of 72 length, this was {}", args[1].len());
             return;
@@ -62,6 +59,10 @@ fn main() {
             dani_move, best_move.score, depth, best_move.info_str
         )
     } else if args.len() == 2 {
+        if !authorised {
+            return;
+        }
+
         let mut input = String::new();
         let mut last_board = 0;
 

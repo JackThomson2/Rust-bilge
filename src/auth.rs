@@ -1,16 +1,11 @@
-use hex_literal::*;
+use crate::config::AUTH_KEY;
 
+use base64::{encode, decode};
 use serde::Deserialize;
 use wmi::{COMLibrary, WMIConnection};
 
-use aes::Aes128;
-use block_modes::block_padding::Pkcs7;
-use block_modes::{BlockMode, Cbc};
-
-type Aes256Cbc = Cbc<Aes128, Pkcs7>;
-
 #[allow(non_snake_case, non_camel_case_types)]
-pub fn get_serial_number() -> Result<(), Box<dyn std::error::Error>> {
+pub fn get_serial_number() -> Result<bool, Box<dyn std::error::Error>> {
     let com_con = COMLibrary::new()?;
     let wmi_con = WMIConnection::new(com_con.into())?;
 
@@ -22,21 +17,26 @@ pub fn get_serial_number() -> Result<(), Box<dyn std::error::Error>> {
     let results: Vec<Win32_OperatingSystem> = wmi_con.query()?;
 
     for os in results {
-        println!("{:#?}", os.SerialNumber);
-
-        get_enc_key(&os.SerialNumber);
+        let encrypted = enc_string(os.SerialNumber);
+        if &encrypted == AUTH_KEY {
+            return Ok(true)
+        }
     }
 
-    Ok(())
+    Ok(false)
 }
 
-fn get_enc_key(encrypting: &str) -> String {
-    let key = hex!("000102030405060708090a0b0c0d0e0f");
-    let iv = hex!("f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0f0");
-    let cipher = Aes256Cbc::new_var(&key, &iv).unwrap();
-    let ciphertext = cipher.encrypt_vec(encrypting.as_bytes());
+fn enc_string(input: String) -> String {
+    let mut return_str = input;
 
-    println!("{:?}", ciphertext);
+    for _i in 0..2 {
+        return_str = encode(
+            return_str.chars()
+                .filter(|c| *c != '-')
+                .map(|c| std::char::from_u32(c as u32 + 10).unwrap_or(c))
+                .collect::<String>(),
+        );
+    }
 
-    "".to_string()
+    return_str
 }

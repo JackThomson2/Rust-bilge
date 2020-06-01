@@ -23,8 +23,7 @@ seahash = "4"
 wmi = "0.4"
 serde = "*"
 rayon = { git = "https://github.com/nikomatsakis/rayon", branch = "latch-target-thread-2" }
-block-modes = "0.3.3"
-hex-literal = "0.2.1"
+base64 = "0.12.1"
 
 [profile.release]
 panic = "abort"
