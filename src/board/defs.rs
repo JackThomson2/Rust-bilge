@@ -4,22 +4,20 @@ pub const WIDTH: i16 = 6;
 pub type MoveSet = HashSet<usize>;
 pub type ColSet = HashSet<usize>;
 
-#[derive(PartialEq, Eq, Clone, Copy, Hash)]
-#[repr(u8)]
-pub enum Pieces {
-    BluePentagon = 0,
-    GreenSquare = 1,
-    BlueCircle = 2,
-    BreenOctagon = 3,
-    DarkBlueSquare = 4,
-    PaleCircle = 5,
-    WavySquare = 6,
-    CRAB = 7,
-    PUFFERFISH = 8,
-    JELLYFISH = 9,
-    CLEARED = 10,
-    NULL = 255,
-}
+pub type Pieces = u8;
+
+pub const BluePentagon: u8 = 0;
+pub const GreenSquare: u8 = 1;
+pub const BlueCircle: u8 = 2;
+pub const BreenOctagon: u8 = 3;
+pub const DarkBlueSquare: u8 = 4;
+pub const PaleCircle: u8 = 5;
+pub const WavySquare: u8 = 6;
+pub const CRAB: u8 = 7;
+pub const PUFFERFISH: u8 = 8;
+pub const JELLYFISH: u8 = 9;
+pub const CLEARED: u8 = 10;
+pub const NULL: u8 = 255;
 
 pub fn str_to_enum(input: &str) -> Vec<Pieces> {
     input
@@ -30,39 +28,26 @@ pub fn str_to_enum(input: &str) -> Vec<Pieces> {
 }
 
 pub fn dani_mapper(val: i16) -> Pieces {
-    piece_from_num(val)
+    val as u8
 }
 
 pub fn piece_from_num(val: i16) -> Pieces {
-    match val {
-        0 => Pieces::BluePentagon,
-        1 => Pieces::GreenSquare,
-        2 => Pieces::BlueCircle,
-        3 => Pieces::BreenOctagon,
-        4 => Pieces::DarkBlueSquare,
-        5 => Pieces::PaleCircle,
-        6 => Pieces::WavySquare,
-        7 => Pieces::CRAB,
-        8 => Pieces::PUFFERFISH,
-        9 => Pieces::JELLYFISH,
-        10 => Pieces::CLEARED,
-        _ => Pieces::NULL,
-    }
+    val as u8
 }
 
-pub fn draw_piece(piece: &Pieces) -> &str {
+pub fn draw_piece(piece: Pieces) -> &'static str {
     match piece {
-        Pieces::CLEARED => " ",
-        Pieces::BluePentagon => "A",
-        Pieces::GreenSquare => "B",
-        Pieces::BlueCircle => "C",
-        Pieces::BreenOctagon => "D",
-        Pieces::DarkBlueSquare => "E",
-        Pieces::PaleCircle => "F",
-        Pieces::WavySquare => "G",
-        Pieces::CRAB => "H",
-        Pieces::PUFFERFISH => "I",
-        Pieces::JELLYFISH => "J",
-        Pieces::NULL => " ",
+        CLEARED => " ",
+        BluePentagon => "A",
+        GreenSquare => "B",
+        BlueCircle => "C",
+        BreenOctagon => "D",
+        DarkBlueSquare => "E",
+        PaleCircle => "F",
+        WavySquare => "G",
+        CRAB => "H",
+        PUFFERFISH => "I",
+        JELLYFISH => "J",
+        _ => " ",
     }
 }

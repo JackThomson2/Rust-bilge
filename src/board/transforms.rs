@@ -1,9 +1,9 @@
 use crate::board::*;
 
-use seahash;
+use fasthash::xxh3::hash64;
 
 use colored::*;
-use defs::Pieces::*;
+use defs::*;
 use helpers::can_move;
 
 use arrayvec::ArrayVec;
@@ -29,7 +29,7 @@ impl GameState {
         for y in (0..12).rev() {
             for x in 0..6 {
                 let pos = (y * 6) + x;
-                let piece = &self.board[pos];
+                let piece = self.board[pos];
 
                 if pos == position || pos == position + 1 {
                     print!("{}", defs::draw_piece(piece).bright_green())
@@ -125,8 +125,7 @@ impl GameState {
 
     #[inline]
     pub fn hash_board(&self) -> u64 {
-        let checking: &[u8; 72] = unsafe { std::mem::transmute(&self.board) };
-        seahash::hash(checking)
+        hash64(self.board.as_ref())
     }
 
     #[inline]

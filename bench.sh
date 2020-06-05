@@ -1,1 +1,1 @@
-RUSTFLAGS="-C target-cpu=native" cargo bench
+RUSTFLAGS="-C target-cpu=native" cargo run --release -- 342425566242255233236626363325325654445364556566465626325643654263463456 6 3

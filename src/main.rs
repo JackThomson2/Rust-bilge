@@ -1,8 +1,8 @@
+pub mod auth;
 pub mod board;
 pub mod config;
-pub mod auth;
 
-use auth::{get_serial_number, dec_string};
+use auth::get_serial_number;
 use board::helpers::move_to_dani_move;
 use config::MAX_DEPTH;
 
@@ -17,15 +17,13 @@ use board::searcher::HashTable;
 static GLOBAL: MiMalloc = MiMalloc;
 
 fn main() {
-    dec_string();
-
     let args: Vec<String> = env::args().collect();
-    
+
     let mut hash_table: HashTable = dashmap::DashMap::with_capacity(20_000_000);
 
     let authorised = match get_serial_number() {
         Ok(true) => true,
-        _ => false
+        _ => false,
     };
 
     //auth::get_serial_number().unwrap();
@@ -50,13 +48,18 @@ fn main() {
         let depth = u8::from_str_radix(&args[2], 10).unwrap();
         let depth = std::cmp::min(depth, MAX_DEPTH);
 
+        let now = Instant::now();
         let game = board::board_from_str(&args[1], water_level);
         let best_move = board::searcher::find_best_move(&game, depth, false, &hash_table);
         let dani_move = move_to_dani_move(best_move.turn);
 
         println!(
-            "{} {} ran at depth {}, {}",
-            dani_move, best_move.score, depth, best_move.info_str
+            "{} {} ran at depth {}, {}, it took {:?}",
+            dani_move,
+            best_move.score,
+            depth,
+            best_move.info_str,
+            now.elapsed()
         )
     } else if args.len() == 2 {
         if !authorised {
@@ -120,7 +123,7 @@ fn main() {
 
             last_board = game.hash_board();
             input = String::new();
-            hash_table = dashmap::DashMap::with_capacity(40_000_000);
+            hash_table = dashmap::DashMap::with_capacity(20_000_000);
         }
     }
 }

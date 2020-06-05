@@ -8,20 +8,16 @@ edition = "2018"
 
 [dependencies]
 atomic-counter = "1"
-aes = "0.3"
 rand = "*"
-hashbrown = "0.7"
 bit-array = "0.4"
 typenum = "1.4"
-num_cpus = "1.1"
-dashmap = "4.0.0-rc3"
+dashmap = "4.0.0-rc4"
 colored = { git = "https://github.com/tforgione/colored" }
-uvth = "*"
 mimalloc = { version = "*", default-features = false }
 arrayvec = "0.5"
-seahash = "4"
 wmi = "0.4"
 serde = "*"
+fasthash = { git = "https://github.com/da-x/rust-fasthash" }
 rayon = { git = "https://github.com/nikomatsakis/rayon", branch = "latch-target-thread-2" }
 base64 = "0.12.1"
 

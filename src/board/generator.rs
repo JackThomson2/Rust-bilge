@@ -4,7 +4,7 @@ use crate::board::GameState;
 use rand::Rng;
 
 pub fn generate_rand_board() -> GameState {
-    let mut board = [Pieces::CLEARED; 6 * 12];
+    let mut board = [CLEARED; 6 * 12];
     let mut rng = rand::thread_rng();
 
     let mut last: Option<Pieces> = None;
@@ -46,7 +46,7 @@ pub fn board_from_array(board: [Pieces; 6 * 12]) -> GameState {
 }
 
 pub fn board_from_str(in_str: &str, water_level: usize) -> GameState {
-    let mut board = [Pieces::NULL; 72];
+    let mut board = [NULL; 72];
     let brd = str_to_enum(in_str);
     board.copy_from_slice(&brd[..]);
 
@@ -62,7 +62,7 @@ pub fn board_from_str(in_str: &str, water_level: usize) -> GameState {
 pub fn generate_game() -> GameState {
     GameState {
         water_level: 3,
-        board: [Pieces::CLEARED; 6 * 12],
+        board: [CLEARED; 6 * 12],
         to_clear: [0; 72],
         clear_count: 0,
         something_cleared: false,

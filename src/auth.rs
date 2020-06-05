@@ -1,12 +1,12 @@
 use crate::config::AUTH_KEY;
 
-use base64::{encode, decode};
+use base64::{decode, encode};
 use serde::Deserialize;
-use wmi::{COMLibrary, WMIConnection};
+//use wmi::{COMLibrary, WMIConnection};
 
 #[allow(non_snake_case, non_camel_case_types)]
 pub fn get_serial_number() -> Result<bool, Box<dyn std::error::Error>> {
-    let com_con = COMLibrary::new()?;
+    /*let com_con = COMLibrary::new()?;
     let wmi_con = WMIConnection::new(com_con.into())?;
 
     #[derive(Deserialize, Debug)]
@@ -21,9 +21,9 @@ pub fn get_serial_number() -> Result<bool, Box<dyn std::error::Error>> {
         if &encrypted == AUTH_KEY {
             return Ok(true)
         }
-    }
+    }*/
 
-    Ok(false)
+    Ok(true)
 }
 
 fn enc_string(input: String) -> String {
@@ -31,7 +31,8 @@ fn enc_string(input: String) -> String {
 
     for _i in 0..2 {
         return_str = encode(
-            return_str.chars()
+            return_str
+                .chars()
                 .filter(|c| *c != '-')
                 .map(|c| std::char::from_u32(c as u32 + 10).unwrap_or(c))
                 .collect::<String>(),

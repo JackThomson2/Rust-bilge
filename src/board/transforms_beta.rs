@@ -1,6 +1,6 @@
 use crate::board::*;
 use bit_array::BitArray;
-use defs::Pieces::*;
+use defs::*;
 
 impl GameState {
     #[inline]
