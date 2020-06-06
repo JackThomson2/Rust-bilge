@@ -20,4 +20,4 @@ Using my desktop at depth 6
 | Date      | Speed | Changes |
 | ----------- | ----------- | ----------- |
 | 06/06/20      | 344ms      | This was the base test |
-|    |         |                         |
+| 06/06/20   |  323ms       |  This capped the heights in the shifts down  |

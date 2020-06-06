@@ -11,8 +11,8 @@ impl GameState {
         while clear_res.0 {
             extra_broken += clear_res.1 + self.clear_count as f32;
 
-            self.remove_clears();
-            self.shift_tracked(moves);
+            let max_y = self.remove_clears_max();
+            self.shift_tracked(moves, max_y);
             clear_res = self.mark_clears_targetted(moves)
         }
 
@@ -20,12 +20,12 @@ impl GameState {
     }
 
     #[inline]
-    fn shift_tracked(&mut self, found: &mut PositionTracker) {
+    fn shift_tracked(&mut self, found: &mut PositionTracker, max_y: usize) {
         found.clear();
 
         for x in 0..6 {
             let mut last = 99999;
-            for y in (0..12).rev() {
+            for y in (0..=max_y).rev() {
                 let pos = (y * 6) + x;
                 unsafe {
                     let checking = *self.board.get_unchecked(pos);
@@ -45,6 +45,28 @@ impl GameState {
                 }
             }
         }
+    }
+
+    #[inline]
+    // New function which will return the biggest y cleared
+    pub fn remove_clears_max(&mut self) -> usize {
+        if self.clear_count == 0 {
+            return 0;
+        }
+
+        let mut max = 0;
+
+        for count in 0..self.clear_count {
+            unsafe {
+                let loc = self.to_clear.get_unchecked(count);
+                *self.board.get_unchecked_mut(*loc) = CLEARED;
+                max = std::cmp::max(*loc, max);
+            }
+        }
+
+        self.clear_count = 0;
+
+        y_pos!(max)
     }
 
     #[inline]
