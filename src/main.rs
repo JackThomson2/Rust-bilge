@@ -34,6 +34,10 @@ fn main() {
         } else {
             println!("You are not authorised!");
         }
+
+        println!("Press any key to close...");
+        let mut input = String::new();
+        let _s = std::io::stdin().read_line(&mut input);
     } else if args.len() == 4 {
         if !authorised {
             return;
