@@ -1,6 +1,6 @@
 use crate::board::*;
 
-use fasthash::xxh3::hash64;
+use seahash::hash;
 
 use colored::*;
 use defs::*;
@@ -125,7 +125,7 @@ impl GameState {
 
     #[inline]
     pub fn hash_board(&self) -> u64 {
-        hash64(self.board.as_ref())
+        hash(&self.board)
     }
 
     #[inline]

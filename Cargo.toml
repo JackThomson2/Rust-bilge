@@ -17,7 +17,7 @@ mimalloc = { version = "*", default-features = false }
 arrayvec = "0.5"
 wmi = "0.4"
 serde = "*"
-fasthash = { git = "https://github.com/da-x/rust-fasthash" }
+seahash = "4.0.0"
 rayon = { git = "https://github.com/nikomatsakis/rayon", branch = "latch-target-thread-2" }
 base64 = "0.12.1"
 
