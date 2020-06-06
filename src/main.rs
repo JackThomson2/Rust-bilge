@@ -4,7 +4,7 @@ pub mod config;
 
 use auth::get_serial_number;
 use board::helpers::move_to_dani_move;
-use config::MAX_DEPTH;
+use config::{MAX_DEPTH, TEST_BOARD};
 
 use mimalloc::MiMalloc;
 
@@ -62,6 +62,12 @@ fn main() {
             now.elapsed()
         )
     } else if args.len() == 2 {
+        // Benchmarking mode
+        if args[1] == "bench" {
+            bench(&hash_table);
+            return;
+        }
+
         if !authorised {
             return;
         }
@@ -126,4 +132,25 @@ fn main() {
             hash_table = dashmap::DashMap::with_capacity(20_000_000);
         }
     }
+}
+
+
+fn bench(map: &HashTable) {
+    let game = board::board_from_str(TEST_BOARD, 3);
+
+    let run_count = 10;
+    let mut average = 0;
+
+    for i in 0..run_count {
+        let now = Instant::now();
+        let _best_moves = board::searcher::find_best_move_list(&game, 6, false, map);
+        let time_taken = now.elapsed();
+
+        println!("Run {} took {:?}", i + 1, time_taken);
+        map.clear();
+
+        average += time_taken.subsec_millis();
+    }
+
+    println!("Took an average of {}ms", average / 10);
 }
