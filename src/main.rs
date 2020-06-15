@@ -18,7 +18,7 @@ static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let mut hash_table: HashTable = dashmap::DashMap::with_capacity(20_000_000);
+    let mut hash_table: HashTable = dashmap::DashMap::with_capacity(40_000_000);
 
     let authorised = match get_serial_number() {
         Ok(true) => true,
@@ -76,7 +76,6 @@ fn main() {
         }
 
         let mut input = String::new();
-        let mut last_board = 0;
 
         while let Ok(_read) = std::io::stdin().read_line(&mut input) {
             let len = input.trim_end_matches(&['\r', '\n'][..]).len();
@@ -96,7 +95,7 @@ fn main() {
             let now = Instant::now();
             let game = board::board_from_str(&commands[0], water_level);
             let best_moves = board::searcher::find_best_move_list(&game, depth, false, &hash_table);
-            let best_move = best_moves.get(0);
+            let best_move = best_moves.turns.get(0);
 
             if best_move.is_none() {
                 println!("Couldnt find any moves");
@@ -107,18 +106,16 @@ fn main() {
 
             let dani_move = move_to_dani_move(best_move.turn);
             println!(
-                "{} {} ran at depth {}, {}. Double move stopped {} took {:?}",
+                "{} {} ran at depth {}, {} took {:?}",
                 dani_move,
                 best_move.score,
                 depth,
                 best_moves.info_str,
-                saved_double_move,
                 now.elapsed()
             );
 
-            last_board = game.hash_board();
             input = String::new();
-            hash_table = dashmap::DashMap::with_capacity(20_000_000);
+            hash_table = dashmap::DashMap::with_capacity(40_000_000);
         }
     }
 }
@@ -137,7 +134,7 @@ fn bench(map: &HashTable) {
         println!("Run {} took {:?}", i + 1, time_taken);
         map.clear();
 
-        average += time_taken.subsec_millis();
+        average += time_taken.as_millis();
     }
 
     println!("Took an average of {}ms", average / 10);
