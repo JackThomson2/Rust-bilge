@@ -6,6 +6,11 @@ edition = "2018"
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
+[features]
+default = ["custom-alloc"]
+
+custom-alloc = ["snmalloc-rs"]
+
 [dependencies]
 atomic-counter = "1"
 rand = "*"
@@ -13,7 +18,7 @@ bit-array = "0.4"
 typenum = "1.4"
 dashmap = "4.0.0-rc4"
 colored = { git = "https://github.com/tforgione/colored" }
-mimalloc = { version = "*", default-features = false }
+snmalloc-rs = { version = "*", features = ["1mib", "cache-friendly", "native-cpu"], optional = true }
 arrayvec = "0.5"
 wmi = "0.4"
 serde = "*"

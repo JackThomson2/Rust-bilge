@@ -6,15 +6,14 @@ use auth::get_serial_number;
 use board::helpers::move_to_dani_move;
 use config::{MAX_DEPTH, TEST_BOARD};
 
-use mimalloc::MiMalloc;
-
 use std::env;
 use std::time::Instant;
 
 use board::searcher::HashTable;
 
+#[cfg(feature = "custom-alloc")]
 #[global_allocator]
-static GLOBAL: MiMalloc = MiMalloc;
+static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -137,7 +136,6 @@ fn main() {
         }
     }
 }
-
 
 fn bench(map: &HashTable) {
     let game = board::board_from_str(TEST_BOARD, 3);
