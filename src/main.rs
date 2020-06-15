@@ -96,21 +96,7 @@ fn main() {
             let now = Instant::now();
             let game = board::board_from_str(&commands[0], water_level);
             let best_moves = board::searcher::find_best_move_list(&game, depth, false, &hash_table);
-            let mut best_move = None;
-
-            let mut saved_double_move = false;
-
-            for mov in best_moves.turns {
-                let mut copy = game;
-                copy.swap(mov.turn);
-
-                if copy.hash_board() != last_board {
-                    best_move = Some(mov);
-                    break;
-                } else {
-                    saved_double_move = true;
-                }
-            }
+            let best_move = best_moves.get(0);
 
             if best_move.is_none() {
                 println!("Couldnt find any moves");
