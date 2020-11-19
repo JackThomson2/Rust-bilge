@@ -1,6 +1,7 @@
 use crate::board::*;
 use bit_array::BitArray;
 use defs::*;
+use structure::set_to_clear;
 
 impl GameState {
     #[inline]
@@ -9,7 +10,7 @@ impl GameState {
         let mut clear_res = self.mark_clears_targetted(moves);
 
         while clear_res.0 {
-            extra_broken += clear_res.1 + self.clear_count as f32;
+            extra_broken += clear_res.1 + clear_count() as f32;
 
             let max_y = self.remove_clears_max();
             self.shift_tracked(moves, max_y);
@@ -50,46 +51,45 @@ impl GameState {
     #[inline]
     // New function which will return the biggest y cleared
     pub fn remove_clears_max(&mut self) -> usize {
-        if self.clear_count == 0 {
+        if clear_count() == 0 {
             return 0;
         }
 
         let mut max = 0;
 
-        for count in 0..self.clear_count {
+        for count in 0..clear_count() {
             unsafe {
-                let loc = self.to_clear.get_unchecked(count);
-                *self.board.get_unchecked_mut(*loc) = CLEARED;
-                max = std::cmp::max(*loc, max);
+                let loc = get_position(count);
+                *self.board.get_unchecked_mut(loc) = CLEARED;
+                max = std::cmp::max(loc, max);
             }
         }
 
-        self.clear_count = 0;
+        reset_clears();
 
         y_pos!(max)
     }
 
     #[inline]
     pub fn remove_clears_tracker(&mut self) -> Option<ShifterTracked> {
-        if self.clear_count == 0 {
+        if clear_count() == 0 {
             return None;
         }
 
         let mut max_y = 0;
         let mut rows: RowArr = BitArray::from_elem(false);
 
-        for count in 0..self.clear_count {
+        for count in 0..clear_count() {
             unsafe {
-                let loc = self.to_clear.get_unchecked(count);
-                *self.board.get_unchecked_mut(*loc) = CLEARED;
+                let loc = get_position(count);
+                *self.board.get_unchecked_mut(loc) = CLEARED;
 
                 max_y = std::cmp::max(max_y, y_pos!(loc));
                 rows.set(x_pos!(loc), true);
             }
         }
 
-        self.clear_count = 0;
-
+        reset_clears();
         Some((max_y, rows))
     }
 
@@ -118,10 +118,8 @@ impl GameState {
             let mut y_down_range = 0;
 
             if piece == CRAB && y > self.water_level {
-                unsafe {
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                }
-                self.clear_count += 1;
+                set_to_clear(pos);
+
                 returning = true;
                 bonus_score += (self.water_level * 2) as f32;
 
@@ -168,20 +166,17 @@ impl GameState {
                 // Move than 3
                 if x_left_range + x_right_range > 1 {
                     returning = true;
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    self.clear_count += 1;
 
+                    set_to_clear(pos);
                     if x_right_range > 0 {
                         for x_range in 1..x_right_range + 1 {
-                            *self.to_clear.get_unchecked_mut(self.clear_count) = pos + (x_range);
-                            self.clear_count += 1;
+                            set_to_clear(pos + x_range);
                         }
                     }
 
                     if x_left_range > 0 {
                         for x_range in 1..x_left_range + 1 {
-                            *self.to_clear.get_unchecked_mut(self.clear_count) = pos - (x_range);
-                            self.clear_count += 1;
+                            set_to_clear(pos - x_range);
                         }
                     }
                 }
@@ -189,22 +184,17 @@ impl GameState {
                 // Move than 3
                 if y_up_range + y_down_range > 1 {
                     returning = true;
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    self.clear_count += 1;
+                    set_to_clear(pos);
 
                     if y_up_range > 0 {
                         for y_range in 1..y_up_range + 1 {
-                            *self.to_clear.get_unchecked_mut(self.clear_count) =
-                                pos + (y_range * 6);
-                            self.clear_count += 1;
+                            set_to_clear(pos + (y_range * 6));
                         }
                     }
 
                     if y_down_range > 0 {
                         for y_range in 1..y_down_range + 1 {
-                            *self.to_clear.get_unchecked_mut(self.clear_count) =
-                                pos - (y_range * 6);
-                            self.clear_count += 1;
+                            set_to_clear(pos - (y_range * 6));
                         }
                     }
                 }

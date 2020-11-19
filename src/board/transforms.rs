@@ -6,7 +6,7 @@ use colored::*;
 use defs::*;
 use helpers::can_move;
 
-use arrayvec::ArrayVec;
+use smallvec::SmallVec;
 
 impl GameState {
     pub fn as_dani_string(&self) -> String {
@@ -48,18 +48,18 @@ impl GameState {
 
     #[inline]
     pub fn remove_clears(&mut self) {
-        if self.clear_count == 0 {
+        if clear_count() == 0 {
             return;
         }
 
-        for count in 0..self.clear_count {
+        for count in 0..clear_count() {
             unsafe {
-                let loc = self.to_clear.get_unchecked(count);
-                *self.board.get_unchecked_mut(*loc) = CLEARED;
+                let loc = get_position(count);
+                *self.board.get_unchecked_mut(loc) = CLEARED;
             }
         }
 
-        self.clear_count = 0;
+        reset_clears();
     }
 
     #[inline]
@@ -70,19 +70,13 @@ impl GameState {
             .enumerate()
             .filter(|(_loc, pce)| *pce == &clearing)
         {
-            unsafe {
-                *self.to_clear.get_unchecked_mut(self.clear_count) = loc;
-            }
-            self.clear_count += 1;
+            set_to_clear(loc);
         }
     }
 
-    #[inline]
+    #[inline(always)]
     fn push_to_clear(&mut self, loc: usize) {
-        unsafe {
-            *self.to_clear.get_unchecked_mut(self.clear_count) = loc;
-        }
-        self.clear_count += 1;
+        set_to_clear(loc);
     }
 
     #[inline]
@@ -130,6 +124,7 @@ impl GameState {
 
     #[inline]
     pub fn swap(&mut self, pos: usize) -> f32 {
+        reset_clears();
         self.something_cleared = false;
 
         let one = unsafe { *self.board.get_unchecked(pos) };
@@ -150,7 +145,7 @@ impl GameState {
                 self.puff(pos + 1);
             }
 
-            return_score = self.clear_count as f32;
+            return_score = clear_count() as f32;
             self.remove_clears();
             self.shift_everything();
             self.something_cleared = true
@@ -160,7 +155,7 @@ impl GameState {
             } else {
                 self.jelly(one);
             }
-            return_score = self.clear_count as f32;
+            return_score = clear_count() as f32;
 
             self.remove_clears();
             self.shift_everything();
@@ -187,8 +182,8 @@ impl GameState {
     }
 
     #[inline]
-    pub fn get_moves(&self) -> ArrayVec<[usize; 64]> {
-        let mut move_vec: ArrayVec<[usize; 64]> = ArrayVec::new();
+    pub fn get_moves(&self) -> SmallVec<[usize; 60]> {
+        let mut move_vec: SmallVec<[usize; 60]> = SmallVec::new();
 
         for (pos, pieces) in self.board.iter().enumerate() {
             if x_pos!(pos) == 5 {
@@ -204,7 +199,7 @@ impl GameState {
             if right == CLEARED || right == NULL || right == CRAB || right == left {
                 continue;
             }
-            unsafe { move_vec.push_unchecked(pos) };
+            move_vec.push(pos);
         }
 
         move_vec
@@ -216,7 +211,7 @@ impl GameState {
         let mut clear_res = self.mark_clears();
 
         while clear_res.0 {
-            extra_broken += self.clear_count as f32;
+            extra_broken += clear_count() as f32;
             extra_broken += clear_res.1;
             self.remove_clears();
             self.shift_everything();
@@ -239,10 +234,7 @@ impl GameState {
             let board_size = 72;
 
             if y > self.water_level && piece == CRAB {
-                unsafe {
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                }
-                self.clear_count += 1;
+                set_to_clear(pos);
                 returning = true;
                 bonus_score += (self.water_level * 2) as f32;
 
@@ -259,10 +251,9 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 1)
                     && piece == *self.board.get_unchecked(pos + 2)
                 {
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 1;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 2;
-                    self.clear_count += 3;
+                    set_to_clear(pos);
+                    set_to_clear(pos + 1);
+                    set_to_clear(pos + 2);
 
                     returning = true;
                 }
@@ -271,10 +262,9 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 6)
                     && piece == *self.board.get_unchecked(pos + 12)
                 {
-                    *self.to_clear.get_unchecked_mut(self.clear_count) = pos;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 1) = pos + 6;
-                    *self.to_clear.get_unchecked_mut(self.clear_count + 2) = pos + 12;
-                    self.clear_count += 3;
+                    set_to_clear(pos);
+                    set_to_clear(pos + 6);
+                    set_to_clear(pos + 12);
 
                     returning = true;
                 }

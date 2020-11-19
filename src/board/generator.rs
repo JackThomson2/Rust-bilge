@@ -25,8 +25,6 @@ pub fn generate_rand_board() -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: [0; 72],
-        clear_count: 0,
         something_cleared: false,
     }
 }
@@ -39,8 +37,6 @@ pub fn board_from_array(board: [Pieces; 6 * 12]) -> GameState {
     GameState {
         water_level: 3,
         board,
-        to_clear: [0; 72],
-        clear_count: 0,
         something_cleared: false,
     }
 }
@@ -53,8 +49,6 @@ pub fn board_from_str(in_str: &str, water_level: usize) -> GameState {
     GameState {
         water_level,
         board,
-        to_clear: [0; 72],
-        clear_count: 0,
         something_cleared: false,
     }
 }
@@ -63,8 +57,6 @@ pub fn generate_game() -> GameState {
     GameState {
         water_level: 3,
         board: [CLEARED; 6 * 12],
-        to_clear: [0; 72],
-        clear_count: 0,
         something_cleared: false,
     }
 }

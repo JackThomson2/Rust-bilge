@@ -16,11 +16,11 @@ typenum = "1.4"
 dashmap = "4.0.0-rc4"
 colored = { git = "https://github.com/tforgione/colored" }
 mimalloc = { version = "*", default-features = false }
-arrayvec = "0.5"
 serde = "*"
 seahash = "4.0.0"
 rayon = { version = "1.5.0" }
 base64 = "0.12.1"
+smallvec = { version = "1.5.0", features = ["union", "const_generics"] }
 
 [profile.release]
 panic = "abort"
