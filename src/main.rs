@@ -1,8 +1,6 @@
-pub mod auth;
 pub mod board;
 pub mod config;
 
-use auth::get_serial_number;
 use board::helpers::move_to_dani_move;
 use config::{MAX_DEPTH, TEST_BOARD};
 
@@ -11,37 +9,15 @@ use std::time::Instant;
 
 use board::searcher::HashTable;
 
-#[cfg(feature = "custom-alloc")]
 #[global_allocator]
-static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
+static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
 
     let mut hash_table: HashTable = dashmap::DashMap::with_capacity(40_000_000);
 
-    let authorised = match get_serial_number() {
-        Ok(true) => true,
-        _ => false,
-    };
-
-    //auth::get_serial_number().unwrap();
-
-    if args.len() == 1 {
-        if authorised {
-            println!("You are authenticated!");
-        } else {
-            println!("You are not authorised!");
-        }
-
-        println!("Press any key to close...");
-        let mut input = String::new();
-        let _s = std::io::stdin().read_line(&mut input);
-    } else if args.len() == 4 {
-        if !authorised {
-            return;
-        }
-
+    if args.len() == 4 {
         if args[1].len() != 72 {
             println!("We need a string of 72 length, this was {}", args[1].len());
             return;
@@ -68,10 +44,6 @@ fn main() {
         // Benchmarking mode
         if args[1] == "bench" {
             bench(&hash_table);
-            return;
-        }
-
-        if !authorised {
             return;
         }
 
