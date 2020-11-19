@@ -1,10 +1,9 @@
 #![feature(thread_local)]
 
 pub mod board;
-pub mod config;
 
+use bilge::config::TEST_BOARD;
 use board::helpers::move_to_dani_move;
-use config::{MAX_DEPTH, TEST_BOARD};
 
 use std::env;
 use std::time::Instant;
@@ -27,7 +26,6 @@ fn main() {
 
         let water_level = usize::from_str_radix(&args[3], 10).unwrap();
         let depth = u8::from_str_radix(&args[2], 10).unwrap();
-        let depth = std::cmp::min(depth, MAX_DEPTH);
 
         let now = Instant::now();
         let game = board::board_from_str(&args[1], water_level);
@@ -64,7 +62,6 @@ fn main() {
 
             let water_level = usize::from_str_radix(&commands[2], 10).unwrap();
             let depth = u8::from_str_radix(&commands[1], 10).unwrap();
-            let depth = std::cmp::min(depth, MAX_DEPTH);
 
             let now = Instant::now();
             let game = board::board_from_str(&commands[0], water_level);
