@@ -54,7 +54,7 @@ fn search(
 
     if hash_table_range {
         if let Some(found) = hasher.get(&copy) {
-            if found.depth == depth {
+            if found.depth >= depth {
                 hash_hits.inc();
                 return Info {
                     turn: move_number,
@@ -71,7 +71,7 @@ fn search(
         };
     }
 
-    let filtered: smallvec::SmallVec<[usize; 62]> = copy
+    let filtered: arrayvec::ArrayVec<[usize; 62]> = copy
         .board
         .iter()
         .enumerate()
@@ -137,7 +137,15 @@ fn search(
     let score = score + (max_score * DROP_PER_TURN);
 
     if hash_table_range {
-        hasher.insert(copy, HashEntry { score, depth });
+        if !hasher.update(&copy, |_key, value| {
+            if value.depth < depth {
+                HashEntry { score, depth }
+            } else {
+                *value
+            }
+        }) {
+            hasher.insert(copy, HashEntry { score, depth });
+        }
     }
 
     Info {
@@ -146,6 +154,7 @@ fn search(
     }
 }
 
+#[derive(Debug, Copy, Clone)]
 pub struct HashEntry {
     score: f32,
     depth: u8,

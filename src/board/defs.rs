@@ -6,13 +6,13 @@ pub type ColSet = HashSet<usize>;
 
 pub type Pieces = u8;
 
-pub const BluePentagon: u8 = 0;
-pub const GreenSquare: u8 = 1;
-pub const BlueCircle: u8 = 2;
-pub const BreenOctagon: u8 = 3;
-pub const DarkBlueSquare: u8 = 4;
-pub const PaleCircle: u8 = 5;
-pub const WavySquare: u8 = 6;
+pub const BLUE_PENTAGON: u8 = 0;
+pub const GREEN_SQUARE: u8 = 1;
+pub const BLUE_CIRCLE: u8 = 2;
+pub const BREEN_OCTAGON: u8 = 3;
+pub const DARK_BLUE_SQUARE: u8 = 4;
+pub const PALE_CIRCLE: u8 = 5;
+pub const WAVY_SQUARE: u8 = 6;
 pub const CRAB: u8 = 7;
 pub const PUFFERFISH: u8 = 8;
 pub const JELLYFISH: u8 = 9;
@@ -38,13 +38,13 @@ pub fn piece_from_num(val: i16) -> Pieces {
 pub fn draw_piece(piece: Pieces) -> &'static str {
     match piece {
         CLEARED => " ",
-        BluePentagon => "A",
-        GreenSquare => "B",
-        BlueCircle => "C",
-        BreenOctagon => "D",
-        DarkBlueSquare => "E",
-        PaleCircle => "F",
-        WavySquare => "G",
+        BLUE_PENTAGON => "A",
+        GREEN_SQUARE => "B",
+        BLUE_CIRCLE => "C",
+        BREEN_OCTAGON => "D",
+        DARK_BLUE_SQUARE => "E",
+        PALE_CIRCLE => "F",
+        WAVY_SQUARE => "G",
         CRAB => "H",
         PUFFERFISH => "I",
         JELLYFISH => "J",

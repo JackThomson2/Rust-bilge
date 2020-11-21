@@ -21,6 +21,7 @@ rayon = { version = "1.5.0" }
 base64 = "0.12.1"
 smallvec = { version = "1.5.0", features = ["union", "const_generics"] }
 ahash = { version = "0.5.8", features = ["specialize"] }
+arrayvec = { version = "0.5.2", features = ["unstable-const-fn", "array-sizes-33-128"] }
 
 [profile.release]
 panic = "abort"

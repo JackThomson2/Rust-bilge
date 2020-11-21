@@ -4,7 +4,7 @@ use colored::*;
 use defs::*;
 use helpers::can_move;
 
-use smallvec::SmallVec;
+use arrayvec::ArrayVec;
 
 impl GameState {
     pub fn as_dani_string(&self) -> String {
@@ -170,8 +170,8 @@ impl GameState {
     }
 
     #[inline]
-    pub fn get_moves(&self) -> SmallVec<[usize; 60]> {
-        let mut move_vec: SmallVec<[usize; 60]> = SmallVec::new();
+    pub fn get_moves(&self) -> ArrayVec<[usize; 60]> {
+        let mut move_vec: ArrayVec<[usize; 60]> = ArrayVec::new();
 
         for (pos, pieces) in self.board.iter().enumerate() {
             if x_pos!(pos) == 5 {
