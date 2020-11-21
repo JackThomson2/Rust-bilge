@@ -154,10 +154,9 @@ impl GameState {
 
             let mut score = self.get_combo(pos) as f32;
 
-            let mut moves = new_tracker(pos);
-
             if score > 0.0 {
-                score += self.clean_board_beta(&mut moves);
+                setup_array(pos);
+                score += self.clean_board_beta();
             }
             return score;
         }
