@@ -7,6 +7,8 @@ use std::sync::Arc;
 
 use ahash::RandomState;
 
+use super::defs::{CLEARED, CRAB, NULL};
+
 const DROP_PER_TURN: f32 = 0.9;
 
 #[derive(Debug, Copy, Clone)]
@@ -69,46 +71,64 @@ fn search(
         };
     }
 
-    let possible_moves = copy.get_moves();
+    let filtered: smallvec::SmallVec<[usize; 62]> = copy
+        .board
+        .iter()
+        .enumerate()
+        .filter_map(|(pos, pieces)| {
+            let x_p = x_pos!(pos);
+            if x_p == 5 {
+                return None;
+            }
 
-    let mv_filter = |x: &&usize| -> bool {
-        let x = **x;
+            let left = *pieces;
+            if left == CLEARED || left == NULL || left == CRAB {
+                return None;
+            }
 
-        // Prevent making the same move again if nothing broke
-        if score == 0.0 && x == move_number {
-            return false;
-        }
+            let right = unsafe { *copy.board.get_unchecked(pos + 1) };
+            if right == CLEARED || right == NULL || right == CRAB || right == left {
+                return None;
+            }
 
-        let x_p = x % 6;
+            // Prevent making the same move again if nothing broke
+            if score == 0.0 && pos == move_number {
+                return None;
+            }
 
-        let valid_col = if actual_depth > 3 {
-            x_p < 4 && x_p > 1
-        } else {
-            x_p < 5 && x_p > 0
-        };
+            let valid_col = if actual_depth > 3 {
+                x_p < 4 && x_p > 1
+            } else {
+                x_p < 5 && x_p > 0
+            };
 
-        if !valid_col {
-            return false;
-        }
+            if !valid_col {
+                return None;
+            }
 
-        if actual_depth > 3 {
-            x >= 12 && x < 48
-        } else {
-            x >= 6 && x < 60
-        }
-    };
+            let safe = if actual_depth > 3 {
+                pos >= 12 && pos < 48
+            } else {
+                pos >= 6 && pos < 60
+            };
+
+            if safe {
+                Some(pos)
+            } else {
+                None
+            }
+        })
+        .collect();
 
     let max_score = if depth > 2 {
-        possible_moves
+        filtered
             .par_iter()
-            .filter(mv_filter)
             .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     } else {
-        possible_moves
+        filtered
             .iter()
-            .filter(mv_filter)
             .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
