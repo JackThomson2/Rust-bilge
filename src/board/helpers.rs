@@ -45,7 +45,7 @@ pub fn int_to_move(move_num: usize) -> Move {
     }
 }
 
-#[inline]
+#[inline(always)]
 pub fn int_to_mover(move_num: usize) -> Move {
     Move {
         y: (move_num) / 6,
@@ -53,7 +53,7 @@ pub fn int_to_mover(move_num: usize) -> Move {
     }
 }
 
-#[inline]
+#[inline(always)]
 pub fn move_to_int(move_num: &Move) -> usize {
     move_num.x + (move_num.y * WIDTH as usize)
 }

@@ -5,6 +5,8 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+use ahash::RandomState;
+
 const DROP_PER_TURN: f32 = 0.9;
 
 #[derive(Debug, Copy, Clone)]
@@ -25,7 +27,7 @@ pub struct TurnList {
     pub info_str: String,
 }
 
-pub type HashTable = DashMap<u64, HashEntry>;
+pub type HashTable = DashMap<GameState, HashEntry, RandomState>;
 
 pub const NULL_MOVE: Info = Info {
     turn: 0,
@@ -34,7 +36,7 @@ pub const NULL_MOVE: Info = Info {
 
 #[inline]
 fn search(
-    board: &GameState,
+    mut copy: GameState,
     max_depth: u8,
     depth: u8,
     move_number: usize,
@@ -42,26 +44,20 @@ fn search(
     hasher: &HashTable,
     hash_hits: &atomic_counter::RelaxedCounter,
 ) -> Info {
-    let mut copy = *board;
     cntr.inc();
     let score = copy.swap(move_number);
     let actual_depth = (max_depth - depth) + 1;
 
     let hash_table_range = depth > 1;
 
-    let mut board_hash = None;
     if hash_table_range {
-        let hash = copy.hash_board();
-        board_hash = Some(hash);
-        if let Some(found) = hasher.get(&hash) {
+        if let Some(found) = hasher.get(&copy) {
             if found.depth == depth {
                 hash_hits.inc();
                 return Info {
                     turn: move_number,
                     score: found.score,
                 };
-            } else if found.depth > depth {
-                board_hash = None;
             }
         }
     }
@@ -77,12 +73,13 @@ fn search(
 
     let mv_filter = |x: &&usize| -> bool {
         let x = **x;
-        let x_p = x % 6;
 
         // Prevent making the same move again if nothing broke
         if score == 0.0 && x == move_number {
             return false;
         }
+
+        let x_p = x % 6;
 
         let valid_col = if actual_depth > 3 {
             x_p < 4 && x_p > 1
@@ -105,22 +102,22 @@ fn search(
         possible_moves
             .par_iter()
             .filter(mv_filter)
-            .map(|i| search(&copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
+            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     } else {
         possible_moves
             .iter()
             .filter(mv_filter)
-            .map(|i| search(&copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
+            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     };
 
     let score = score + (max_score * DROP_PER_TURN);
 
-    if let Some(key) = board_hash {
-        hasher.insert(key, HashEntry { score, depth });
+    if hash_table_range {
+        hasher.insert(copy, HashEntry { score, depth });
     }
 
     Info {
@@ -171,7 +168,7 @@ pub fn find_best_move_list(
         .par_iter()
         .map(|testing| {
             search(
-                &board,
+                *board,
                 depth,
                 depth,
                 *testing,

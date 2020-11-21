@@ -8,6 +8,8 @@ use board::helpers::move_to_dani_move;
 use std::env;
 use std::time::Instant;
 
+use ahash::RandomState;
+
 use board::searcher::HashTable;
 
 #[global_allocator]
@@ -16,7 +18,9 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 fn main() {
     let args: Vec<String> = env::args().collect();
 
-    let mut hash_table: HashTable = dashmap::DashMap::with_capacity(40_000_000);
+    let random = RandomState::new();
+
+    let mut hash_table: HashTable = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
 
     if args.len() == 4 {
         if args[1].len() != 72 {
@@ -43,7 +47,7 @@ fn main() {
     } else if args.len() == 2 {
         // Benchmarking mode
         if args[1] == "bench" {
-            bench(&hash_table);
+            bench(&mut hash_table);
             return;
         }
 
@@ -86,12 +90,14 @@ fn main() {
             );
 
             input = String::new();
-            hash_table = dashmap::DashMap::with_capacity(40_000_000);
+
+            let random = RandomState::new();
+            hash_table = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
         }
     }
 }
 
-fn bench(map: &HashTable) {
+fn bench(map: &mut HashTable) {
     let game = board::board_from_str(TEST_BOARD, 3);
 
     let run_count = 10;
@@ -103,7 +109,9 @@ fn bench(map: &HashTable) {
         let time_taken = now.elapsed();
 
         println!("Run {} took {:?}", i + 1, time_taken);
-        map.clear();
+
+        let random = RandomState::new();
+        *map = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
 
         average += time_taken.as_millis();
     }

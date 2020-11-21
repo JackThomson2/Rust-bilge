@@ -47,16 +47,12 @@ pub fn get_position(index: usize) -> usize {
     unsafe { *TO_CLEAR.get_unchecked(index) }
 }
 
-/*impl PartialEq for GameState {
+impl PartialEq for GameState {
     fn eq(&self, other: &Self) -> bool {
-        println!("I am called?");
-        self.board
-            .iter()
-            .zip(other.board.iter())
-            .all(|(a, b)| a == b)
+        self.board == other.board
     }
 }
-impl Eq for GameState {}*/
+impl Eq for GameState {}
 
 impl Hash for GameState {
     fn hash<H: Hasher>(&self, hasher: &mut H) {

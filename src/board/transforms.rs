@@ -1,7 +1,5 @@
 use crate::board::*;
 
-use seahash::hash;
-
 use colored::*;
 use defs::*;
 use helpers::can_move;
@@ -74,11 +72,6 @@ impl GameState {
         }
     }
 
-    #[inline(always)]
-    fn push_to_clear(&mut self, loc: usize) {
-        set_to_clear(loc);
-    }
-
     #[inline]
     fn puff(&mut self, pos: usize) {
         let x = x_pos!(pos);
@@ -88,38 +81,33 @@ impl GameState {
         let right = x < 5;
         let left = x > 0;
 
-        self.push_to_clear(pos);
+        set_to_clear(pos);
 
         if up {
-            self.push_to_clear(pos - 6);
+            set_to_clear(pos - 6);
         }
         if down {
-            self.push_to_clear(pos + 6);
+            set_to_clear(pos + 6);
         }
         if left {
-            self.push_to_clear(pos - 1);
+            set_to_clear(pos - 1);
         }
         if right {
-            self.push_to_clear(pos + 1);
+            set_to_clear(pos + 1);
         }
 
         if up && right {
-            self.push_to_clear(pos - 5);
+            set_to_clear(pos - 5);
         }
         if up && left {
-            self.push_to_clear(pos - 7);
+            set_to_clear(pos - 7);
         }
         if down && right {
-            self.push_to_clear(pos + 7);
+            set_to_clear(pos + 7);
         }
         if down && left {
-            self.push_to_clear(pos + 5);
+            set_to_clear(pos + 5);
         }
-    }
-
-    #[inline]
-    pub fn hash_board(&self) -> u64 {
-        hash(&self.board)
     }
 
     #[inline]
