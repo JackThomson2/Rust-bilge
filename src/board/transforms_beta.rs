@@ -1,10 +1,15 @@
 use crate::board::*;
-use bit_array::BitArray;
 use defs::*;
 use structure::set_to_clear;
 
 #[thread_local]
 pub static mut POSITION_TRACKER: [isize; 6] = [-1; 6];
+
+#[thread_local]
+pub static mut REMOVING_TRACKER: [usize; 72] = [0; 72];
+
+#[thread_local]
+pub static mut REMOVING_COUNT: usize = 0;
 
 impl GameState {
     #[inline]
@@ -15,8 +20,8 @@ impl GameState {
         while clear_res.0 {
             extra_broken += clear_res.1 + clear_count() as f32;
 
-            let max_y = self.remove_clears_max();
-            self.shift_tracked(max_y);
+            self.remove_clears_max();
+            self.shift_tracked();
             clear_res = self.mark_clears_targetted();
         }
 
@@ -24,11 +29,14 @@ impl GameState {
     }
 
     #[inline]
-    fn shift_tracked(&mut self, max_y: usize) {
+    fn shift_tracked(&mut self) {
         unsafe {
-            POSITION_TRACKER.iter_mut().for_each(|m| *m = -1);
+            for (x, max_y) in POSITION_TRACKER.iter().enumerate() {
+                let max_y= match max_y {
+                    d if *d < 0 => continue,
+                    a => *a as usize,
+                };
 
-            for x in 0..6 {
                 let mut last = 99999;
                 for y in (0..=max_y).rev() {
                     let pos = (y * 6) + x;
@@ -42,7 +50,8 @@ impl GameState {
                         *self.board.get_unchecked_mut(last_pos) = checking;
                         *self.board.get_unchecked_mut(pos) = CLEARED;
 
-                        POSITION_TRACKER[x] = last_pos as isize;
+                        REMOVING_TRACKER[REMOVING_COUNT] = last_pos;
+                        REMOVING_COUNT += 1;
                         last -= 1;
                     }
                 }
@@ -51,27 +60,29 @@ impl GameState {
     }
 
     #[inline]
-    // New function which will return the biggest y cleared
-    pub fn remove_clears_max(&mut self) -> usize {
+    /// New function which will return the biggest y cleared
+    pub fn remove_clears_max(&mut self) {
         if clear_count() == 0 {
-            return 0;
+            return;
         }
 
-        let mut max = 0;
+        unsafe {POSITION_TRACKER.iter_mut().for_each(|m| *m = -1);}
 
         for count in 0..clear_count() {
             unsafe {
                 let loc = get_position(count);
                 *self.board.get_unchecked_mut(loc) = CLEARED;
-                max = std::cmp::max(loc, max);
+
+                let x_pos = x_pos!(loc);
+
+                *POSITION_TRACKER.get_unchecked_mut(x_pos) =
+                    std::cmp::max(*POSITION_TRACKER.get_unchecked(x_pos), y_pos!(loc) as isize);
             }
         }
-
         reset_clears();
-
-        y_pos!(max)
     }
 
+    /*
     #[inline]
     pub fn remove_clears_tracker(&mut self) -> Option<ShifterTracked> {
         if clear_count() == 0 {
@@ -93,7 +104,7 @@ impl GameState {
 
         reset_clears();
         Some((max_y, rows))
-    }
+    }*/
 
     /// Alternative to mark clears which will check around a point
     #[inline]
@@ -102,22 +113,11 @@ impl GameState {
         let mut bonus_score = 0.0;
 
         unsafe {
-            for pos in POSITION_TRACKER.iter() {
-                let pos = match pos {
-                    d if *d < 0 => continue,
-                    a => *a as usize,
-                };
-
+            for pos in REMOVING_TRACKER[0..REMOVING_COUNT].iter() {
+                let pos  = *pos;
                 let piece = *self.board.get_unchecked(pos);
 
-                let x = x_pos!(pos);
                 let y = y_pos!(pos);
-
-                let mut x_left_range = 0;
-                let mut x_right_range = 0;
-
-                let mut y_up_range = 0;
-                let mut y_down_range = 0;
 
                 if piece == CRAB && y > self.water_level {
                     set_to_clear(pos);
@@ -131,6 +131,14 @@ impl GameState {
                 if !can_move(piece) {
                     continue;
                 }
+
+                let mut x_left_range = 0;
+                let mut x_right_range = 0;
+
+                let mut y_up_range = 0;
+                let mut y_down_range = 0;
+
+                let x = x_pos!(pos);
 
                 if x < 5 && piece == *self.board.get_unchecked(pos + 1) {
                     x_right_range += 1;
@@ -200,7 +208,11 @@ impl GameState {
                     }
                 }
             }
+
+            
+            REMOVING_COUNT = 0;
         }
+
 
         (returning, bonus_score)
     }
@@ -209,12 +221,8 @@ impl GameState {
 #[inline]
 pub fn setup_array(position: usize) {
     unsafe {
-        POSITION_TRACKER.iter_mut().for_each(|m| *m = -1);
-
-        let x_1 = x_pos!(position);
-        let x_2 = x_pos!(position + 1);
-
-        POSITION_TRACKER[x_1] = position as isize;
-        POSITION_TRACKER[x_2] = (position + 1) as isize;
+        REMOVING_TRACKER[0] = position;
+        REMOVING_TRACKER[1] = position + 1;
+        REMOVING_COUNT = 2;
     }
 }

@@ -17,7 +17,6 @@ static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
-
     let random = RandomState::new();
 
     let mut hash_table: HashTable = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
@@ -108,7 +107,13 @@ fn bench(map: &mut HashTable) {
         let _best_moves = board::searcher::find_best_move_list(&game, 6, true, map);
         let time_taken = now.elapsed();
 
-        println!("Run {} took {:?} best move {:?}", i + 1, time_taken, _best_moves.turns.get(0).unwrap());
+        println!(
+            "Run {} took {:?} best move {:?}, hashtable size {}",
+            i + 1,
+            time_taken,
+            _best_moves.turns.get(0).unwrap(),
+            map.len()
+        );
 
         let random = RandomState::new();
         *map = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);

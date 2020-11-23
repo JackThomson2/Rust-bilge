@@ -1,8 +1,6 @@
 use std::collections::HashSet;
 
 pub const WIDTH: i16 = 6;
-pub type MoveSet = HashSet<usize>;
-pub type ColSet = HashSet<usize>;
 
 pub type Pieces = u8;
 
