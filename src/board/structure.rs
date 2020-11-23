@@ -1,5 +1,6 @@
 use crate::board::defs::*;
 use std::hash::{Hash, Hasher};
+use ahash::{CallHasher, AHasher, RandomState};
 
 pub type Board = [Pieces; 6 * 12];
 
@@ -47,6 +48,15 @@ pub fn get_position(index: usize) -> usize {
     unsafe { *TO_CLEAR.get_unchecked(index) }
 }
 
+#[inline(always)]
+pub fn make_hash(brd: &[u8], depth: u8) -> u64 {
+    let mut hashing = AHasher::default();
+
+    hashing.write(brd);
+    hashing.write_u8(depth);
+    
+    hashing.finish()
+}
 impl PartialEq for GameState {
     fn eq(&self, other: &Self) -> bool {
         self.board == other.board
@@ -56,7 +66,7 @@ impl Eq for GameState {}
 
 impl Hash for GameState {
     fn hash<H: Hasher>(&self, hasher: &mut H) {
-        Hash::hash_slice(&self.board, hasher);
+        self.board.get_hash(hasher);
     }
 }
 

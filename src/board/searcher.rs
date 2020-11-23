@@ -1,4 +1,6 @@
 use crate::board::GameState;
+use crate::board::make_hash;
+
 use atomic_counter::AtomicCounter;
 use dashmap::DashMap;
 use rayon::prelude::*;
@@ -29,7 +31,7 @@ pub struct TurnList {
     pub info_str: String,
 }
 
-pub type HashTable = DashMap<GameState, HashEntry, RandomState>;
+pub type HashTable = DashMap<u64, f32, RandomState>;
 
 pub const NULL_MOVE: Info = Info {
     turn: 0,
@@ -51,16 +53,16 @@ fn search(
     let actual_depth = (max_depth - depth) + 1;
 
     let hash_table_range = depth > 1;
+    let mut hashed = 0;
 
     if hash_table_range {
-        if let Some(found) = hasher.get(&copy) {
-            if found.depth >= depth {
-                hash_hits.inc();
-                return Info {
-                    turn: move_number,
-                    score: found.score,
-                };
-            }
+        hashed = make_hash(&copy.board, depth);
+        if let Some(found) = hasher.get(&hashed) {
+            hash_hits.inc();
+            return Info {
+                turn: move_number,
+                score: *found,
+            };
         }
     }
 
@@ -137,15 +139,7 @@ fn search(
     let score = score + (max_score * DROP_PER_TURN);
 
     if hash_table_range {
-        if !hasher.update(&copy, |_key, value| {
-            if value.depth < depth {
-                HashEntry { score, depth }
-            } else {
-                *value
-            }
-        }) {
-            hasher.insert(copy, HashEntry { score, depth });
-        }
+        hasher.insert(hashed, score);
     }
 
     Info {

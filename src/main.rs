@@ -105,10 +105,10 @@ fn bench(map: &mut HashTable) {
 
     for i in 0..run_count {
         let now = Instant::now();
-        let _best_moves = board::searcher::find_best_move_list(&game, 6, false, map);
+        let _best_moves = board::searcher::find_best_move_list(&game, 6, true, map);
         let time_taken = now.elapsed();
 
-        println!("Run {} took {:?}", i + 1, time_taken);
+        println!("Run {} took {:?} best move {:?}", i + 1, time_taken, _best_moves.turns.get(0).unwrap());
 
         let random = RandomState::new();
         *map = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
