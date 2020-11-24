@@ -33,7 +33,7 @@ impl GameState {
                     print!("{}", defs::draw_piece(piece).bright_green())
                 } else if x_pos!(pos) == 5 {
                     print!("{}", defs::draw_piece(piece).red())
-                } else if y <= self.water_level {
+                } else if y <= self.water_level as usize {
                     print!("{}", defs::draw_piece(piece).blue())
                 } else {
                     print!("{}", defs::draw_piece(piece));
@@ -113,7 +113,7 @@ impl GameState {
     #[inline]
     pub fn swap(&mut self, pos: usize) -> f32 {
         reset_clears();
-        self.something_cleared = false;
+        let something_cleared;
 
         let one = unsafe { *self.board.get_unchecked(pos) };
         let two = unsafe { *self.board.get_unchecked(pos + 1) };
@@ -136,7 +136,7 @@ impl GameState {
             return_score = clear_count() as f32;
             self.remove_clears();
             self.shift_everything();
-            self.something_cleared = true
+            something_cleared = true
         } else if one == JELLYFISH || two == JELLYFISH {
             if one == JELLYFISH {
                 self.jelly(two);
@@ -147,7 +147,7 @@ impl GameState {
 
             self.remove_clears();
             self.shift_everything();
-            self.something_cleared = true
+            something_cleared = true
         } else {
             unsafe { *self.board.get_unchecked_mut(pos) = two };
             unsafe { *self.board.get_unchecked_mut(pos + 1) = one };
@@ -161,7 +161,7 @@ impl GameState {
             return score;
         }
 
-        if self.something_cleared {
+        if something_cleared {
             return_score += self.clean_board();
         }
 
@@ -170,26 +170,23 @@ impl GameState {
 
     #[inline]
     pub fn get_moves(&self) -> ArrayVec<[usize; 60]> {
-        let mut move_vec: ArrayVec<[usize; 60]> = ArrayVec::new();
-
-        for (pos, pieces) in self.board.iter().enumerate() {
+        self.board.iter().enumerate().filter_map(|(pos, pieces)| {
             if x_pos!(pos) == 5 {
-                continue;
+                return None;
             }
 
             let left = *pieces;
             if left == CLEARED || left == NULL || left == CRAB {
-                continue;
+                return None;
             }
 
             let right = unsafe { *self.board.get_unchecked(pos + 1) };
             if right == CLEARED || right == NULL || right == CRAB || right == left {
-                continue;
+                return None;
             }
-            move_vec.push(pos);
-        }
 
-        move_vec
+            Some(pos)
+        }).collect()
     }
 
     #[inline]
@@ -220,7 +217,7 @@ impl GameState {
 
             let board_size = 72;
 
-            if y > self.water_level && piece == CRAB {
+            if y > self.water_level as usize && piece == CRAB {
                 set_to_clear(pos);
                 returning = true;
                 bonus_score += (self.water_level * 2) as f32;

@@ -82,30 +82,6 @@ impl GameState {
         reset_clears();
     }
 
-    /*
-    #[inline]
-    pub fn remove_clears_tracker(&mut self) -> Option<ShifterTracked> {
-        if clear_count() == 0 {
-            return None;
-        }
-
-        let mut max_y = 0;
-        let mut rows: RowArr = BitArray::from_elem(false);
-
-        for count in 0..clear_count() {
-            unsafe {
-                let loc = get_position(count);
-                *self.board.get_unchecked_mut(loc) = CLEARED;
-
-                max_y = std::cmp::max(max_y, y_pos!(loc));
-                rows.set(x_pos!(loc), true);
-            }
-        }
-
-        reset_clears();
-        Some((max_y, rows))
-    }*/
-
     /// Alternative to mark clears which will check around a point
     #[inline]
     fn mark_clears_targetted(&mut self) -> (bool, f32) {
@@ -119,7 +95,7 @@ impl GameState {
 
                 let y = y_pos!(pos);
 
-                if piece == CRAB && y > self.water_level {
+                if piece == CRAB && y > self.water_level as usize {
                     set_to_clear(pos);
 
                     returning = true;

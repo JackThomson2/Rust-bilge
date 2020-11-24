@@ -1,5 +1,5 @@
-use crate::board::GameState;
 use crate::board::make_hash;
+use crate::board::GameState;
 
 use atomic_counter::AtomicCounter;
 use dashmap::DashMap;
@@ -47,8 +47,8 @@ fn search(
     cntr: &atomic_counter::RelaxedCounter,
     hasher: &HashTable,
     hash_hits: &atomic_counter::RelaxedCounter,
-) -> Info {
-    cntr.inc();
+) -> f32 {
+    //cntr.inc();
     let score = copy.swap(move_number);
     let actual_depth = (max_depth - depth) + 1;
 
@@ -58,19 +58,13 @@ fn search(
     if hash_table_range {
         hashed = make_hash(&copy.board, depth);
         if let Some(found) = hasher.get(&hashed) {
-            hash_hits.inc();
-            return Info {
-                turn: move_number,
-                score: *found,
-            };
+            // hash_hits.inc();
+            return *found;
         }
     }
 
     if score < 0.0 || depth == 1 {
-        return Info {
-            turn: move_number,
-            score,
-        };
+        return score;
     }
 
     let filtered: arrayvec::ArrayVec<[usize; 62]> = copy
@@ -125,13 +119,13 @@ fn search(
     let max_score = if depth > 2 {
         filtered
             .par_iter()
-            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
+            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     } else {
         filtered
             .iter()
-            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits).score)
+            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     };
@@ -142,10 +136,7 @@ fn search(
         hasher.insert(hashed, score);
     }
 
-    Info {
-        turn: move_number,
-        score,
-    }
+    score
 }
 
 #[derive(Debug, Copy, Clone)]
@@ -189,8 +180,9 @@ pub fn find_best_move_list(
 
     let mut best_move: Vec<Info> = possible_moves
         .par_iter()
-        .map(|testing| {
-            search(
+        .map(|testing| Info {
+            turn: *testing,
+            score: search(
                 *board,
                 depth,
                 depth,
@@ -198,7 +190,7 @@ pub fn find_best_move_list(
                 &cntr,
                 &hash_table,
                 &hash_hits,
-            )
+            ),
         })
         .collect();
 

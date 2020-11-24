@@ -1,6 +1,8 @@
 use crate::board::defs::*;
 use std::hash::{Hash, Hasher};
-use ahash::{CallHasher, AHasher, RandomState};
+use ahash::CallHasher;
+
+use wyhash::WyHash;
 
 pub type Board = [Pieces; 6 * 12];
 
@@ -19,8 +21,7 @@ pub struct Move {
 #[derive(Clone, Copy)]
 pub struct GameState {
     pub board: Board,
-    pub water_level: usize,
-    pub something_cleared: bool,
+    pub water_level: u8,
 }
 
 #[inline(always)]
@@ -50,7 +51,7 @@ pub fn get_position(index: usize) -> usize {
 
 #[inline(always)]
 pub fn make_hash(brd: &[u8], depth: u8) -> u64 {
-    let mut hashing = AHasher::default();
+    let mut hashing = WyHash::with_seed(1);
 
     hashing.write(brd);
     hashing.write_u8(depth);

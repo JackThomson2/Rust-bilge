@@ -25,7 +25,6 @@ pub fn generate_rand_board() -> GameState {
     GameState {
         water_level: 3,
         board,
-        something_cleared: false,
     }
 }
 
@@ -36,27 +35,24 @@ pub fn copy_board(copying: &GameState) -> GameState {
 pub fn board_from_array(board: [Pieces; 6 * 12]) -> GameState {
     GameState {
         water_level: 3,
-        board,
-        something_cleared: false,
+        board
     }
 }
 
-pub fn board_from_str(in_str: &str, water_level: usize) -> GameState {
+pub fn board_from_str(in_str: &str, water_level: u8) -> GameState {
     let mut board = [NULL; 72];
     let brd = str_to_enum(in_str);
     board.copy_from_slice(&brd[..]);
 
     GameState {
         water_level,
-        board,
-        something_cleared: false,
+        board
     }
 }
 
 pub fn generate_game() -> GameState {
     GameState {
         water_level: 3,
-        board: [CLEARED; 6 * 12],
-        something_cleared: false,
+        board: [CLEARED; 6 * 12]
     }
 }

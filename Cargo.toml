@@ -11,17 +11,14 @@ edition = "2018"
 [dependencies]
 atomic-counter = "1"
 rand = "*"
-bit-array = "0.4"
 typenum = "1.4"
-dashmap = "4.0.0-rc4"
+dashmap = "4.0.0-rc6"
 colored = { git = "https://github.com/tforgione/colored" }
 mimalloc = { version = "*", default-features = false }
-serde = "*"
 rayon = { version = "1.5.0" }
-base64 = "0.12.1"
-smallvec = { version = "1.5.0", features = ["union", "const_generics"] }
-ahash = { version = "0.5.8", features = ["specialize"] }
+ahash = { version = "0.5.7", features = ["specialize"], default-features= false }
 arrayvec = { version = "0.5.2", features = ["unstable-const-fn", "array-sizes-33-128"] }
+wyhash = "0.4.2"
 
 [profile.release]
 panic = "abort"
