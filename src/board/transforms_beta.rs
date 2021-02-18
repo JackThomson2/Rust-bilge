@@ -32,7 +32,7 @@ impl GameState {
     fn shift_tracked(&mut self) {
         unsafe {
             for (x, max_y) in POSITION_TRACKER.iter().enumerate() {
-                let max_y= match max_y {
+                let max_y = match max_y {
                     d if *d < 0 => continue,
                     a => *a as usize,
                 };
@@ -66,7 +66,9 @@ impl GameState {
             return;
         }
 
-        unsafe {POSITION_TRACKER.iter_mut().for_each(|m| *m = -1);}
+        unsafe {
+            POSITION_TRACKER.iter_mut().for_each(|m| *m = -1);
+        }
 
         for count in 0..clear_count() {
             unsafe {
@@ -90,7 +92,7 @@ impl GameState {
 
         unsafe {
             for pos in REMOVING_TRACKER[0..REMOVING_COUNT].iter() {
-                let pos  = *pos;
+                let pos = *pos;
                 let piece = *self.board.get_unchecked(pos);
 
                 let y = y_pos!(pos);
@@ -185,10 +187,8 @@ impl GameState {
                 }
             }
 
-            
             REMOVING_COUNT = 0;
         }
-
 
         (returning, bonus_score)
     }

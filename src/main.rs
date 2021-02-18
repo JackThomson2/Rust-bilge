@@ -106,7 +106,7 @@ fn bench(map: &mut HashTable) {
 
     for i in 0..run_count {
         let now = Instant::now();
-        let _best_moves = board::searcher::find_best_move_list(&game, 6, false, map);
+        let _best_moves = board::searcher::find_best_move_list(&game, 3, false, map);
         let time_taken = now.elapsed();
 
         println!(

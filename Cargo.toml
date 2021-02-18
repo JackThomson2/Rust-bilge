@@ -12,13 +12,14 @@ edition = "2018"
 atomic-counter = "1"
 rand = "*"
 typenum = "1.4"
-dashmap = "4.0.0-rc6"
+dashmap = "=4.0.0-rc6"
 colored = { git = "https://github.com/tforgione/colored" }
 mimalloc = { version = "*", default-features = false }
 rayon = { version = "1.5.0" }
-ahash = { version = "0.5.7", features = ["specialize"], default-features= false }
+ahash = { version = "0.7" }
 arrayvec = { version = "0.5.2", features = ["unstable-const-fn", "array-sizes-33-128"] }
 wyhash = "0.4.2"
+unroll = "0.1.5"
 
 [profile.release]
 panic = "abort"

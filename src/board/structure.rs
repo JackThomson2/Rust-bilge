@@ -1,8 +1,5 @@
 use crate::board::defs::*;
-use std::hash::{Hash, Hasher};
-use ahash::CallHasher;
-
-use wyhash::WyHash;
+use std::hash::Hasher;
 
 pub type Board = [Pieces; 6 * 12];
 
@@ -12,16 +9,16 @@ pub static mut TO_CLEAR: [usize; 72] = [0; 72];
 #[thread_local]
 pub static mut CLEAR_COUNT: usize = 0;
 
-#[derive(Copy, Clone, Debug)]
-pub struct Move {
-    pub x: usize,
-    pub y: usize,
-}
-
 #[derive(Clone, Copy)]
 pub struct GameState {
     pub board: Board,
     pub water_level: u8,
+}
+
+#[derive(Copy, Clone, Debug)]
+pub struct Move {
+    pub x: usize,
+    pub y: usize,
 }
 
 #[inline(always)]
@@ -50,12 +47,12 @@ pub fn get_position(index: usize) -> usize {
 }
 
 #[inline(always)]
-pub fn make_hash(brd: &[u8], depth: u8) -> u64 {
-    let mut hashing = WyHash::with_seed(1);
+pub fn make_hash(brd: &[u8; 72], depth: u8) -> u64 {
+    let mut hashing = ahash::AHasher::default();
 
     hashing.write(brd);
     hashing.write_u8(depth);
-    
+
     hashing.finish()
 }
 impl PartialEq for GameState {
@@ -64,12 +61,6 @@ impl PartialEq for GameState {
     }
 }
 impl Eq for GameState {}
-
-impl Hash for GameState {
-    fn hash<H: Hasher>(&self, hasher: &mut H) {
-        self.board.get_hash(hasher);
-    }
-}
 
 #[derive(Debug, Copy, Clone)]
 pub struct SearchResult {

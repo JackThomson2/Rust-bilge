@@ -4,6 +4,8 @@ use colored::*;
 use defs::*;
 use helpers::can_move;
 
+use unroll::unroll_for_loops;
+
 use arrayvec::ArrayVec;
 
 impl GameState {
@@ -170,23 +172,27 @@ impl GameState {
 
     #[inline]
     pub fn get_moves(&self) -> ArrayVec<[usize; 60]> {
-        self.board.iter().enumerate().filter_map(|(pos, pieces)| {
-            if x_pos!(pos) == 5 {
-                return None;
-            }
+        self.board
+            .iter()
+            .enumerate()
+            .filter_map(|(pos, pieces)| {
+                if x_pos!(pos) == 5 {
+                    return None;
+                }
 
-            let left = *pieces;
-            if left == CLEARED || left == NULL || left == CRAB {
-                return None;
-            }
+                let left = *pieces;
+                if left == CLEARED || left == NULL || left == CRAB {
+                    return None;
+                }
 
-            let right = unsafe { *self.board.get_unchecked(pos + 1) };
-            if right == CLEARED || right == NULL || right == CRAB || right == left {
-                return None;
-            }
+                let right = unsafe { *self.board.get_unchecked(pos + 1) };
+                if right == CLEARED || right == NULL || right == CRAB || right == left {
+                    return None;
+                }
 
-            Some(pos)
-        }).collect()
+                Some(pos)
+            })
+            .collect()
     }
 
     #[inline]
@@ -258,6 +264,7 @@ impl GameState {
         (returning, bonus_score)
     }
 
+    #[unroll_for_loops]
     #[inline]
     fn shift_everything(&mut self) {
         for x in 0..6 {
@@ -288,9 +295,11 @@ impl GameState {
         let left_piece = unsafe { self.board.get_unchecked(pos) };
         let right_piece = unsafe { self.board.get_unchecked(pos + 1) };
 
-        let mut left = 1; //left 3 pieces
+        let mut mult_ct = 0;
+
+        let mut left = 0; //left 3 pieces
         let mut l_col = 1; //left column of 5 pieces
-        let mut right = 1; //right 3 pieces
+        let mut right = 0; //right 3 pieces
         let mut r_col = 1; //left column of 5 pieces
 
         unsafe {
@@ -299,31 +308,38 @@ impl GameState {
                 && self.board.get_unchecked(pos - 2) == left_piece
             {
                 left = 3;
+                mult_ct = 1;
             }
+
             if x < 3
                 && self.board.get_unchecked(pos + 2) == right_piece
                 && self.board.get_unchecked(pos + 3) == right_piece
             {
                 right = 3;
+                mult_ct += 1;
             }
+
             if pos > 5 && self.board.get_unchecked(pos - 6) == left_piece {
                 l_col += 1;
                 if pos > 11 && self.board.get_unchecked(pos - 12) == left_piece {
                     l_col += 1;
                 }
             }
+
             if pos < 66 && self.board.get_unchecked(pos + 6) == left_piece {
                 l_col += 1;
                 if pos < 60 && self.board.get_unchecked(pos + 12) == left_piece {
                     l_col += 1;
                 }
             }
+
             if pos > 4 && self.board.get_unchecked(pos - 5) == right_piece {
                 r_col += 1;
                 if pos > 10 && self.board.get_unchecked(pos - 11) == right_piece {
                     r_col += 1;
                 }
             }
+
             if pos < 65 && self.board.get_unchecked(pos + 7) == right_piece {
                 r_col += 1;
                 if pos < 59 && self.board.get_unchecked(pos + 13) == right_piece {
@@ -337,20 +353,6 @@ impl GameState {
         }
         if l_col < 3 {
             l_col = 0;
-        }
-        if left < 3 {
-            left = 0;
-        }
-        if right < 3 {
-            right = 0;
-        }
-
-        let mut mult_ct = 0;
-        if left == 3 {
-            mult_ct += 1;
-        }
-        if right == 3 {
-            mult_ct += 1;
         }
 
         if l_col >= 3 {

@@ -67,17 +67,22 @@ fn search(
         return score;
     }
 
-    let filtered: arrayvec::ArrayVec<[usize; 62]> = copy
-        .board
-        .iter()
-        .enumerate()
-        .filter_map(|(pos, pieces)| {
+    let (base, end) = if actual_depth > 3 {
+        (12usize, 48usize)
+    } else {
+        (6, 60)
+    };
+
+    let range = base..end;
+
+    let filtered: arrayvec::ArrayVec<[usize; 54]> = range
+        .filter_map(|pos| {
             let x_p = x_pos!(pos);
             if x_p == 5 {
                 return None;
             }
 
-            let left = *pieces;
+            let left = unsafe { *copy.board.get_unchecked(pos) };
             if left == CLEARED || left == NULL || left == CRAB {
                 return None;
             }
@@ -98,20 +103,10 @@ fn search(
                 x_p < 5 && x_p > 0
             };
 
-            if !valid_col {
+            if valid_col {
+                return Some(pos);
+            } else {
                 return None;
-            }
-
-            let safe = if actual_depth > 3 {
-                pos >= 12 && pos < 48
-            } else {
-                pos >= 6 && pos < 60
-            };
-
-            if safe {
-                Some(pos)
-            } else {
-                None
             }
         })
         .collect();
