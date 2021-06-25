@@ -9,7 +9,7 @@ pub static mut TO_CLEAR: [usize; 72] = [0; 72];
 #[thread_local]
 pub static mut CLEAR_COUNT: usize = 0;
 
-#[derive(Clone, Copy)]
+#[derive(Clone, Copy, Hash)]
 pub struct GameState {
     pub board: Board,
     pub water_level: u8,
@@ -55,7 +55,9 @@ pub fn make_hash(brd: &[u8; 72], depth: u8) -> u64 {
 
     hashing.finish()
 }
+
 impl PartialEq for GameState {
+    #[inline]
     fn eq(&self, other: &Self) -> bool {
         self.board == other.board
     }

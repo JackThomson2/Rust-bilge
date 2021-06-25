@@ -2,7 +2,7 @@
 
 pub mod board;
 
-use bilge::{board::GameState, config::TEST_BOARD};
+use bilge::config::TEST_BOARD;
 use board::helpers::move_to_dani_move;
 
 use std::env;
@@ -13,7 +13,8 @@ use ahash::RandomState;
 use board::searcher::HashTable;
 
 #[global_allocator]
-static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
+static ALLOC: snmalloc_rs::SnMalloc = snmalloc_rs::SnMalloc;
+//static ALLOC: mimalloc::MiMalloc = mimalloc::MiMalloc;
 
 fn main() {
     let args: Vec<String> = env::args().collect();
@@ -21,7 +22,9 @@ fn main() {
 
     let mut hash_table: HashTable = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
 
-    if args.len() == 4 {
+    let arg_count = args.len();
+
+    if arg_count == 4 {
         if args[1].len() != 72 {
             println!("We need a string of 72 length, this was {}", args[1].len());
             return;
@@ -43,9 +46,9 @@ fn main() {
             best_move.info_str,
             now.elapsed()
         )
-    } else if args.len() == 2 {
+    } else if arg_count == 2 || arg_count == 1 {
         // Benchmarking mode
-        if args[1] == "bench" {
+        if arg_count == 1 || args[1] == "bench" {
             bench(&mut hash_table);
             return;
         }
@@ -106,7 +109,7 @@ fn bench(map: &mut HashTable) {
 
     for i in 0..run_count {
         let now = Instant::now();
-        let _best_moves = board::searcher::find_best_move_list(&game, 3, false, map);
+        let _best_moves = board::searcher::find_best_move_list(&game, 5, false, map);
         let time_taken = now.elapsed();
 
         println!(

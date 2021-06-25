@@ -1,6 +1,7 @@
 use crate::board::make_hash;
 use crate::board::GameState;
 
+use crate::board::Board;
 use atomic_counter::AtomicCounter;
 use dashmap::DashMap;
 use rayon::prelude::*;
@@ -31,7 +32,7 @@ pub struct TurnList {
     pub info_str: String,
 }
 
-pub type HashTable = DashMap<u64, f32, RandomState>;
+pub type HashTable = DashMap<Board, HashEntry, RandomState>;
 
 pub const NULL_MOVE: Info = Info {
     turn: 0,
@@ -53,13 +54,14 @@ fn search(
     let actual_depth = (max_depth - depth) + 1;
 
     let hash_table_range = depth > 1;
-    let mut hashed = 0;
 
     if hash_table_range {
-        hashed = make_hash(&copy.board, depth);
-        if let Some(found) = hasher.get(&hashed) {
+        //hashed = make_hash(&copy.board, depth);
+        if let Some(found) = hasher.get(&copy.board) {
             // hash_hits.inc();
-            return *found;
+            if found.depth >= depth {
+                return found.score;
+            }
         }
     }
 
@@ -67,7 +69,8 @@ fn search(
         return score;
     }
 
-    let (base, end) = if actual_depth > 3 {
+    let greater_than_three = actual_depth > 3;
+    let (base, end) = if greater_than_three {
         (12usize, 48usize)
     } else {
         (6, 60)
@@ -75,60 +78,57 @@ fn search(
 
     let range = base..end;
 
-    let filtered: arrayvec::ArrayVec<[usize; 54]> = range
-        .filter_map(|pos| {
-            let x_p = x_pos!(pos);
-            if x_p == 5 {
-                return None;
-            }
+    let filter = |pos: usize| {
+        let x_p = x_pos!(pos);
 
-            let left = unsafe { *copy.board.get_unchecked(pos) };
-            if left == CLEARED || left == NULL || left == CRAB {
-                return None;
-            }
+        let valid_col = if greater_than_three {
+            x_p < 4 && x_p > 1
+        } else {
+            x_p < 5 && x_p > 0
+        };
 
-            let right = unsafe { *copy.board.get_unchecked(pos + 1) };
-            if right == CLEARED || right == NULL || right == CRAB || right == left {
-                return None;
-            }
+        if !valid_col {
+            return None;
+        }
 
-            // Prevent making the same move again if nothing broke
-            if score == 0.0 && pos == move_number {
-                return None;
-            }
+        let left = unsafe { *copy.board.get_unchecked(pos) };
+        if left == CLEARED || left == NULL || left == CRAB {
+            return None;
+        }
 
-            let valid_col = if actual_depth > 3 {
-                x_p < 4 && x_p > 1
-            } else {
-                x_p < 5 && x_p > 0
-            };
+        let right = unsafe { *copy.board.get_unchecked(pos + 1) };
+        if right == CLEARED || right == NULL || right == CRAB || right == left {
+            return None;
+        }
 
-            if valid_col {
-                return Some(pos);
-            } else {
-                return None;
-            }
-        })
-        .collect();
+        // Prevent making the same move again if nothing broke
+        if score == 0.0 && pos == move_number {
+            return None;
+        }
 
-    let max_score = if depth > 2 {
+        Some(pos)
+    };
+
+    let max_score = if depth > 3 {
+        let filtered: arrayvec::ArrayVec<usize, 54> = range.filter_map(filter).collect();
+
         filtered
             .par_iter()
             .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     } else {
-        filtered
-            .iter()
-            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits))
+        range
+            .filter_map(filter)
+            .map(|i| search(copy, max_depth, depth - 1, i, &cntr, &hasher, &hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     };
 
-    let score = score + (max_score * DROP_PER_TURN);
+    let score = score + (max_score as f32 * DROP_PER_TURN);
 
     if hash_table_range {
-        hasher.insert(hashed, score);
+        hasher.insert(copy.board, HashEntry { score, depth });
     }
 
     score

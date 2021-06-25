@@ -1,8 +1,8 @@
 use crate::board::*;
 
-use colored::*;
 use defs::*;
 use helpers::can_move;
+use recolored::*;
 
 use unroll::unroll_for_loops;
 
@@ -171,7 +171,7 @@ impl GameState {
     }
 
     #[inline]
-    pub fn get_moves(&self) -> ArrayVec<[usize; 60]> {
+    pub fn get_moves(&self) -> ArrayVec<usize, 60> {
         self.board
             .iter()
             .enumerate()

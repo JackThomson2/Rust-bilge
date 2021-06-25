@@ -1,3 +1,5 @@
+use std::slice;
+
 use crate::board::*;
 use defs::*;
 use structure::set_to_clear;
@@ -50,7 +52,7 @@ impl GameState {
                         *self.board.get_unchecked_mut(last_pos) = checking;
                         *self.board.get_unchecked_mut(pos) = CLEARED;
 
-                        REMOVING_TRACKER[REMOVING_COUNT] = last_pos;
+                        *REMOVING_TRACKER.get_unchecked_mut(REMOVING_COUNT) = last_pos;
                         REMOVING_COUNT += 1;
                         last -= 1;
                     }
@@ -91,7 +93,10 @@ impl GameState {
         let mut bonus_score = 0.0;
 
         unsafe {
-            for pos in REMOVING_TRACKER[0..REMOVING_COUNT].iter() {
+            let ptr = REMOVING_TRACKER.as_mut_ptr();
+            let slice = slice::from_raw_parts(ptr, REMOVING_COUNT);
+
+            for pos in slice.iter() {
                 let pos = *pos;
                 let piece = *self.board.get_unchecked(pos);
 
@@ -197,8 +202,8 @@ impl GameState {
 #[inline]
 pub fn setup_array(position: usize) {
     unsafe {
-        REMOVING_TRACKER[0] = position;
-        REMOVING_TRACKER[1] = position + 1;
+        *REMOVING_TRACKER.get_unchecked_mut(0) = position;
+        *REMOVING_TRACKER.get_unchecked_mut(1) = position + 1;
         REMOVING_COUNT = 2;
     }
 }
