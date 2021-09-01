@@ -1,4 +1,3 @@
-use crate::board::make_hash;
 use crate::board::GameState;
 
 use crate::board::Board;
@@ -8,6 +7,7 @@ use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::sync::Arc;
 
+use super::helpers::x_pos_fast;
 use ahash::RandomState;
 
 use super::defs::{CLEARED, CRAB, NULL};
@@ -56,7 +56,6 @@ fn search(
     let hash_table_range = depth > 1;
 
     if hash_table_range {
-        //hashed = make_hash(&copy.board, depth);
         if let Some(found) = hasher.get(&copy.board) {
             // hash_hits.inc();
             if found.depth >= depth {
@@ -79,7 +78,7 @@ fn search(
     let range = base..end;
 
     let filter = |pos: usize| {
-        let x_p = x_pos!(pos);
+        let x_p = x_pos_fast(pos);
 
         let valid_col = if greater_than_three {
             x_p < 4 && x_p > 1

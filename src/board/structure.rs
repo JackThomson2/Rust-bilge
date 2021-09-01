@@ -1,49 +1,23 @@
 use crate::board::defs::*;
-use std::hash::Hasher;
+use std::{
+    hash::Hasher,
+    intrinsics::{likely, unlikely},
+};
 
 pub type Board = [Pieces; 6 * 12];
-
-#[thread_local]
-pub static mut TO_CLEAR: [usize; 72] = [0; 72];
-
-#[thread_local]
-pub static mut CLEAR_COUNT: usize = 0;
 
 #[derive(Clone, Copy, Hash)]
 pub struct GameState {
     pub board: Board,
     pub water_level: u8,
+    pub to_clear_l: u64,
+    pub to_clear_r: u16,
 }
 
 #[derive(Copy, Clone, Debug)]
 pub struct Move {
     pub x: usize,
     pub y: usize,
-}
-
-#[inline(always)]
-pub fn set_to_clear(new_value: usize) {
-    unsafe {
-        *TO_CLEAR.get_unchecked_mut(CLEAR_COUNT) = new_value;
-        CLEAR_COUNT += 1;
-    }
-}
-
-#[inline(always)]
-pub fn reset_clears() {
-    unsafe {
-        CLEAR_COUNT = 0;
-    }
-}
-
-#[inline(always)]
-pub fn clear_count() -> usize {
-    unsafe { CLEAR_COUNT }
-}
-
-#[inline(always)]
-pub fn get_position(index: usize) -> usize {
-    unsafe { *TO_CLEAR.get_unchecked(index) }
 }
 
 #[inline(always)]

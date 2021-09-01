@@ -19,9 +19,33 @@ macro_rules! y_pos {
     };
 }
 
+const fn build_x_arr() -> [usize; 72] {
+    let mut end = [0; 72];
+
+    let mut cntr = 0;
+
+    loop {
+        end[cntr] = cntr % 6;
+
+        cntr += 1;
+        if cntr >= 72 {
+            break;
+        }
+    }
+
+    end
+}
+
+pub const X_ARR: [usize; 72] = build_x_arr();
+
+#[inline]
+pub fn x_pos_fast(x: usize) -> usize {
+    unsafe { *X_ARR.get_unchecked(x) }
+}
+
 #[inline]
 pub fn move_to_dani_move(movement: usize) -> usize {
-    let x = x_pos!(movement);
+    let x = x_pos_fast(movement);
     let y = 12 - y_pos!(movement);
 
     (y * 5) + x

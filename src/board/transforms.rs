@@ -1,3 +1,5 @@
+use std::intrinsics::{likely, unlikely};
+
 use crate::board::*;
 
 use defs::*;
@@ -33,7 +35,7 @@ impl GameState {
 
                 if pos == position || pos == position + 1 {
                     print!("{}", defs::draw_piece(piece).bright_green())
-                } else if x_pos!(pos) == 5 {
+                } else if x_pos_fast(pos) == 5 {
                     print!("{}", defs::draw_piece(piece).red())
                 } else if y <= self.water_level as usize {
                     print!("{}", defs::draw_piece(piece).blue())
@@ -46,75 +48,141 @@ impl GameState {
         println!();
     }
 
-    #[inline]
-    pub fn remove_clears(&mut self) {
-        if clear_count() == 0 {
+    #[inline(always)]
+    pub fn clear_count(&self) -> usize {
+        self.to_clear_l.count_ones() as usize + self.to_clear_r.count_ones() as usize
+    }
+
+    #[inline(always)]
+    pub fn reset_clears(&mut self) {
+        self.to_clear_l = 0;
+        self.to_clear_r = 0;
+    }
+
+    #[inline(always)]
+    pub fn set_to_clear(&mut self, new_value: usize) {
+        if unlikely(new_value > 64) {
+            let mask = 1 << (new_value - 64);
+            self.to_clear_r |= mask;
             return;
         }
 
-        for count in 0..clear_count() {
+        let mask = 1 << new_value;
+
+        self.to_clear_l |= mask;
+    }
+
+    #[inline(always)]
+    pub fn set_to_inside(&self, a: &mut u64, b: &mut u16, new_value: usize) {
+        if unlikely(new_value > 64) {
+            let mask = 1 << (new_value - 64);
+            *b |= mask;
+            return;
+        }
+
+        let mask = 1 << new_value;
+
+        *a |= mask;
+    }
+
+    #[inline(always)]
+    pub fn get_position(&mut self) -> usize {
+        if likely(self.to_clear_l != 0) {
+            let new_pos = self.to_clear_l.trailing_zeros();
+            let pos = 1 << new_pos;
+
+            self.to_clear_l ^= pos;
+
+            return new_pos as usize;
+        }
+
+        let new_pos = self.to_clear_r.trailing_zeros();
+        let pos = 1 << new_pos;
+
+        self.to_clear_r ^= pos;
+
+        return new_pos as usize + 64;
+    }
+
+    #[inline]
+    pub fn remove_clears(&mut self) {
+        if self.clear_count() == 0 {
+            return;
+        }
+
+        loop {
             unsafe {
-                let loc = get_position(count);
+                let loc = self.get_position();
                 *self.board.get_unchecked_mut(loc) = CLEARED;
+            }
+
+            if self.clear_count() == 0 {
+                break;
             }
         }
 
-        reset_clears();
+        self.reset_clears();
     }
 
     #[inline]
     fn jelly(&mut self, clearing: defs::Pieces) {
+        let mut outer_a = 0;
+        let mut outer_b = 0;
+
         for (loc, _pce) in self
             .board
             .iter()
             .enumerate()
             .filter(|(_loc, pce)| *pce == &clearing)
         {
-            set_to_clear(loc);
+            self.set_to_inside(&mut outer_a, &mut outer_b, loc);
         }
+
+        self.to_clear_l |= outer_a;
+        self.to_clear_r |= outer_b;
     }
 
     #[inline]
     fn puff(&mut self, pos: usize) {
-        let x = x_pos!(pos);
+        let x = x_pos_fast(pos);
 
         let up = pos >= 6;
         let down = pos < 66;
         let right = x < 5;
         let left = x > 0;
 
-        set_to_clear(pos);
+        self.set_to_clear(pos);
 
         if up {
-            set_to_clear(pos - 6);
+            self.set_to_clear(pos - 6);
         }
         if down {
-            set_to_clear(pos + 6);
+            self.set_to_clear(pos + 6);
         }
         if left {
-            set_to_clear(pos - 1);
+            self.set_to_clear(pos - 1);
         }
         if right {
-            set_to_clear(pos + 1);
+            self.set_to_clear(pos + 1);
         }
 
         if up && right {
-            set_to_clear(pos - 5);
+            self.set_to_clear(pos - 5);
         }
         if up && left {
-            set_to_clear(pos - 7);
+            self.set_to_clear(pos - 7);
         }
         if down && right {
-            set_to_clear(pos + 7);
+            self.set_to_clear(pos + 7);
         }
         if down && left {
-            set_to_clear(pos + 5);
+            self.set_to_clear(pos + 5);
         }
     }
 
     #[inline]
     pub fn swap(&mut self, pos: usize) -> f32 {
-        reset_clears();
+        self.reset_clears();
         let something_cleared;
 
         let one = unsafe { *self.board.get_unchecked(pos) };
@@ -135,7 +203,7 @@ impl GameState {
                 self.puff(pos + 1);
             }
 
-            return_score = clear_count() as f32;
+            return_score = self.clear_count() as f32;
             self.remove_clears();
             self.shift_everything();
             something_cleared = true
@@ -145,7 +213,7 @@ impl GameState {
             } else {
                 self.jelly(one);
             }
-            return_score = clear_count() as f32;
+            return_score = self.clear_count() as f32;
 
             self.remove_clears();
             self.shift_everything();
@@ -157,7 +225,6 @@ impl GameState {
             let mut score = self.get_combo(pos) as f32;
 
             if score > 0.0 {
-                setup_array(pos);
                 score += self.clean_board_beta();
             }
             return score;
@@ -176,7 +243,7 @@ impl GameState {
             .iter()
             .enumerate()
             .filter_map(|(pos, pieces)| {
-                if x_pos!(pos) == 5 {
+                if x_pos_fast(pos) == 5 {
                     return None;
                 }
 
@@ -201,7 +268,7 @@ impl GameState {
         let mut clear_res = self.mark_clears();
 
         while clear_res.0 {
-            extra_broken += clear_count() as f32;
+            extra_broken += self.clear_count() as f32;
             extra_broken += clear_res.1;
             self.remove_clears();
             self.shift_everything();
@@ -216,15 +283,18 @@ impl GameState {
         let mut returning = false;
         let mut bonus_score = 0.0;
 
+        let mut outer_a = 0;
+        let mut outer_b = 0;
+
         for (pos, piece) in self.board.iter().enumerate() {
             let piece = *piece;
-            let x = x_pos!(pos);
+            let x = x_pos_fast(pos);
             let y = y_pos!(pos);
 
             let board_size = 72;
 
-            if y > self.water_level as usize && piece == CRAB {
-                set_to_clear(pos);
+            if unlikely(y > self.water_level as usize && piece == CRAB) {
+                self.set_to_inside(&mut outer_a, &mut outer_b, pos);
                 returning = true;
                 bonus_score += (self.water_level * 2) as f32;
 
@@ -241,9 +311,9 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 1)
                     && piece == *self.board.get_unchecked(pos + 2)
                 {
-                    set_to_clear(pos);
-                    set_to_clear(pos + 1);
-                    set_to_clear(pos + 2);
+                    self.set_to_inside(&mut outer_a, &mut outer_b, pos);
+                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 1);
+                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 2);
 
                     returning = true;
                 }
@@ -252,14 +322,17 @@ impl GameState {
                     && piece == *self.board.get_unchecked(pos + 6)
                     && piece == *self.board.get_unchecked(pos + 12)
                 {
-                    set_to_clear(pos);
-                    set_to_clear(pos + 6);
-                    set_to_clear(pos + 12);
+                    self.set_to_inside(&mut outer_a, &mut outer_b, pos);
+                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 6);
+                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 12);
 
                     returning = true;
                 }
             }
         }
+
+        self.to_clear_l |= outer_a;
+        self.to_clear_r |= outer_b;
 
         (returning, bonus_score)
     }
@@ -290,7 +363,7 @@ impl GameState {
 
     #[inline]
     fn get_combo(&self, pos: usize) -> i32 {
-        let x = x_pos!(pos);
+        let x = x_pos_fast(pos);
 
         let left_piece = unsafe { self.board.get_unchecked(pos) };
         let right_piece = unsafe { self.board.get_unchecked(pos + 1) };
