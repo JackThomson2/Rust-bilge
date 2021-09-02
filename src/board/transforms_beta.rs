@@ -1,38 +1,45 @@
-use std::slice;
+use std::{intrinsics::unlikely, mem::MaybeUninit, slice};
 
 use crate::board::*;
 use defs::*;
 
-#[thread_local]
-pub static mut POSITION_TRACKER: [isize; 6] = [-1; 6];
-
-#[thread_local]
-pub static mut REMOVING_TRACKER: [usize; 72] = [0; 72];
-
-#[thread_local]
-pub static mut REMOVING_COUNT: usize = 0;
-
 impl GameState {
     #[inline]
-    pub fn clean_board_beta(&mut self) -> f32 {
+    pub fn clean_board_beta(&mut self, pos: usize) -> f32 {
+        let mut position_tracker: [isize; 6] = [-1; 6];
+        let mut removing_tracker: [usize; 72] = unsafe { MaybeUninit::uninit().assume_init() };
+        let mut removing_count: usize = 2;
+
+        removing_tracker[0] = pos;
+        removing_tracker[1] = pos + 1;
+
         let mut extra_broken = 0.0;
-        let mut clear_res = self.mark_clears_targetted();
+        let mut clear_res = self.mark_clears_targetted(&mut removing_count, &mut removing_tracker);
 
         while clear_res.0 {
             extra_broken += clear_res.1 + self.clear_count() as f32;
 
-            self.remove_clears_max();
-            self.shift_tracked();
-            clear_res = self.mark_clears_targetted();
+            self.remove_clears_max(&mut position_tracker);
+            self.shift_tracked(
+                &mut position_tracker,
+                &mut removing_count,
+                &mut removing_tracker,
+            );
+            clear_res = self.mark_clears_targetted(&mut removing_count, &mut removing_tracker);
         }
 
         extra_broken
     }
 
     #[inline]
-    fn shift_tracked(&mut self) {
+    fn shift_tracked(
+        &mut self,
+        position_tracker: &mut [isize; 6],
+        removing_count: &mut usize,
+        removing_tracker: &mut [usize; 72],
+    ) {
         unsafe {
-            for (x, max_y) in POSITION_TRACKER.iter().enumerate() {
+            for (x, max_y) in position_tracker.iter().enumerate() {
                 let max_y = match max_y {
                     d if *d < 0 => continue,
                     a => *a as usize,
@@ -51,8 +58,8 @@ impl GameState {
                         *self.board.get_unchecked_mut(last_pos) = checking;
                         *self.board.get_unchecked_mut(pos) = CLEARED;
 
-                        *REMOVING_TRACKER.get_unchecked_mut(REMOVING_COUNT) = last_pos;
-                        REMOVING_COUNT += 1;
+                        *removing_tracker.get_unchecked_mut(*removing_count) = last_pos;
+                        *removing_count += 1;
                         last -= 1;
                     }
                 }
@@ -62,14 +69,12 @@ impl GameState {
 
     #[inline]
     /// New function which will return the biggest y cleared
-    pub fn remove_clears_max(&mut self) {
+    pub fn remove_clears_max(&mut self, position_tracker: &mut [isize; 6]) {
         if self.clear_count() == 0 {
             return;
         }
 
-        unsafe {
-            POSITION_TRACKER.iter_mut().for_each(|m| *m = -1);
-        }
+        position_tracker.iter_mut().for_each(|m| *m = -1);
 
         while self.clear_count() != 0 {
             unsafe {
@@ -78,8 +83,10 @@ impl GameState {
 
                 let x_pos = x_pos_fast(loc);
 
-                *POSITION_TRACKER.get_unchecked_mut(x_pos) =
-                    std::cmp::max(*POSITION_TRACKER.get_unchecked(x_pos), y_pos!(loc) as isize);
+                *position_tracker.get_unchecked_mut(x_pos) = std::cmp::max(
+                    *position_tracker.get_unchecked(x_pos),
+                    y_pos_fast(loc) as isize,
+                );
             }
         }
         self.reset_clears();
@@ -87,21 +94,25 @@ impl GameState {
 
     /// Alternative to mark clears which will check around a point
     #[inline]
-    fn mark_clears_targetted(&mut self) -> (bool, f32) {
+    fn mark_clears_targetted(
+        &mut self,
+        removing_count: &mut usize,
+        removing_tracker: &mut [usize; 72],
+    ) -> (bool, f32) {
         let mut returning = false;
         let mut bonus_score = 0.0;
 
         unsafe {
-            let ptr = REMOVING_TRACKER.as_mut_ptr();
-            let slice = slice::from_raw_parts(ptr, REMOVING_COUNT);
+            let ptr = removing_tracker.as_mut_ptr();
+            let slice = slice::from_raw_parts(ptr, *removing_count);
 
             for pos in slice.iter() {
                 let pos = *pos;
                 let piece = *self.board.get_unchecked(pos);
 
-                let y = y_pos!(pos);
+                let y = y_pos_fast(pos);
 
-                if piece == CRAB && y > self.water_level as usize {
+                if unlikely(piece == CRAB && y > self.water_level as usize) {
                     self.set_to_clear(pos);
 
                     returning = true;
@@ -191,7 +202,7 @@ impl GameState {
                 }
             }
 
-            REMOVING_COUNT = 0;
+            *removing_count = 0;
         }
 
         (returning, bonus_score)

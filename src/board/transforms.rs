@@ -86,6 +86,25 @@ impl GameState {
     }
 
     #[inline(always)]
+    pub fn set_start(&mut self, new_value: usize) {
+        if unlikely(new_value == 64) {
+            self.set_to_clear(new_value);
+            self.set_to_clear(new_value + 1);
+
+            return;
+        }
+
+        if unlikely(new_value > 64) {
+            const START: u16 = 0b_0011;
+            self.to_clear_r |= START << (new_value - 64);
+            return;
+        }
+
+        const START_BIG: u64 = 0b0011;
+        self.to_clear_l |= START_BIG << new_value;
+    }
+
+    #[inline(always)]
     pub fn get_position(&mut self) -> usize {
         if likely(self.to_clear_l != 0) {
             let new_pos = self.to_clear_l.trailing_zeros();
@@ -120,8 +139,6 @@ impl GameState {
                 break;
             }
         }
-
-        self.reset_clears();
     }
 
     #[inline]
@@ -225,7 +242,7 @@ impl GameState {
             let mut score = self.get_combo(pos) as f32;
 
             if score > 0.0 {
-                score += self.clean_board_beta();
+                score += self.clean_board_beta(pos);
             }
             return score;
         }
@@ -289,7 +306,7 @@ impl GameState {
         for (pos, piece) in self.board.iter().enumerate() {
             let piece = *piece;
             let x = x_pos_fast(pos);
-            let y = y_pos!(pos);
+            let y = y_pos_fast(pos);
 
             let board_size = 72;
 
