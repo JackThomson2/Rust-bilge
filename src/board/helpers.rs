@@ -52,6 +52,72 @@ pub fn y_pos_fast(x: usize) -> usize {
     unsafe { *Y_ARR.get_unchecked(x) }
 }
 
+pub const PUFFER: [(u64, u16); 72] = build_puffers();
+
+macro_rules! apply_to_pair {
+    ($pair:expr, $pos:expr) => {
+        if $pos >= 64 {
+            $pair.1 |= 1 << ($pos - 64);
+        } else {
+            $pair.0 |= 1 << $pos;
+        }
+    };
+}
+
+pub const fn build_puffers() -> [(u64, u16); 72] {
+    let mut end = [(0, 0); 72];
+    let mut pos = 0;
+
+    loop {
+        let x = X_ARR[pos];
+        let y = Y_ARR[pos];
+
+        let mut pair = (0, 0);
+
+        apply_to_pair!(pair, pos);
+
+        let up = y > 0;
+        let down = y < 11;
+        let right = x < 5;
+        let left = x > 0;
+
+        if up {
+            apply_to_pair!(pair, pos - 6);
+        }
+        if down {
+            apply_to_pair!(pair, pos + 6);
+        }
+        if left {
+            apply_to_pair!(pair, pos - 1);
+        }
+        if right {
+            apply_to_pair!(pair, pos + 1);
+        }
+
+        if up && right {
+            apply_to_pair!(pair, pos - 5);
+        }
+        if up && left {
+            apply_to_pair!(pair, pos - 7);
+        }
+        if down && right {
+            apply_to_pair!(pair, pos + 7);
+        }
+        if down && left {
+            apply_to_pair!(pair, pos + 5);
+        }
+
+        end[pos] = pair;
+
+        pos += 1;
+        if pos >= 72 {
+            break;
+        }
+    }
+
+    end
+}
+
 #[inline]
 pub fn move_to_dani_move(movement: usize) -> usize {
     let x = x_pos_fast(movement);
@@ -80,7 +146,6 @@ pub fn int_to_mover(move_num: usize) -> Move {
 pub fn move_to_int(move_num: &Move) -> usize {
     move_num.x + (move_num.y * WIDTH as usize)
 }
-
 macro_rules! promote_scorers {
     ($x:expr) => {
         match $x {

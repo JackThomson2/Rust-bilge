@@ -73,6 +73,12 @@ impl GameState {
     }
 
     #[inline(always)]
+    pub fn apply_pair_to_self(&mut self, pair: (u64, u16)) {
+        self.to_clear_l |= pair.0;
+        self.to_clear_r |= pair.1;
+    }
+
+    #[inline(always)]
     pub fn set_to_inside(&self, a: &mut u64, b: &mut u16, new_value: usize) {
         if unlikely(new_value > 64) {
             let mask = 1 << (new_value - 64);
@@ -161,40 +167,8 @@ impl GameState {
 
     #[inline]
     fn puff(&mut self, pos: usize) {
-        let x = x_pos_fast(pos);
-
-        let up = pos >= 6;
-        let down = pos < 66;
-        let right = x < 5;
-        let left = x > 0;
-
-        self.set_to_clear(pos);
-
-        if up {
-            self.set_to_clear(pos - 6);
-        }
-        if down {
-            self.set_to_clear(pos + 6);
-        }
-        if left {
-            self.set_to_clear(pos - 1);
-        }
-        if right {
-            self.set_to_clear(pos + 1);
-        }
-
-        if up && right {
-            self.set_to_clear(pos - 5);
-        }
-        if up && left {
-            self.set_to_clear(pos - 7);
-        }
-        if down && right {
-            self.set_to_clear(pos + 7);
-        }
-        if down && left {
-            self.set_to_clear(pos + 5);
-        }
+        let pair = unsafe { *PUFFER.get_unchecked(pos) };
+        self.apply_pair_to_self(pair)
     }
 
     #[inline]

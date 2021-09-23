@@ -1,8 +1,5 @@
 use crate::board::defs::*;
-use std::{
-    hash::Hasher,
-    intrinsics::{likely, unlikely},
-};
+use std::hash::Hasher;
 
 pub type Board = [Pieces; 6 * 12];
 
