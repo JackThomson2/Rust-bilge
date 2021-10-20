@@ -5,6 +5,8 @@ use atomic_counter::AtomicCounter;
 use dashmap::DashMap;
 use rayon::prelude::*;
 use std::cmp::Ordering;
+use std::intrinsics::likely;
+use std::intrinsics::unlikely;
 use std::sync::Arc;
 
 use super::helpers::x_pos_fast;
@@ -12,7 +14,7 @@ use ahash::RandomState;
 
 use super::defs::{CLEARED, CRAB, NULL};
 
-const DROP_PER_TURN: f32 = 0.9;
+const DROP_PER_TURN: f32 = 0.8;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Info {
@@ -42,7 +44,6 @@ pub const NULL_MOVE: Info = Info {
 #[inline]
 fn search(
     mut copy: GameState,
-    max_depth: u8,
     depth: u8,
     move_number: usize,
     cntr: &atomic_counter::RelaxedCounter,
@@ -50,16 +51,16 @@ fn search(
     hash_hits: &atomic_counter::RelaxedCounter,
 ) -> f32 {
     //cntr.inc();
-    let score = copy.swap(move_number);
-    let actual_depth = (max_depth - depth) + 1;
-
+    let mut score = copy.swap(move_number);
     let hash_table_range = depth > 1;
 
-    if hash_table_range {
-        if let Some(found) = hasher.get(&copy.board) {
-            // hash_hits.inc();
-            if found.depth >= depth {
-                return found.score;
+    if likely(hash_table_range) {
+        let found = hasher.get(&copy.board);
+
+        if unlikely(found.is_some()) {
+            let entry = unsafe { found.unwrap_unchecked() };
+            if entry.depth >= depth {
+                return entry.score;
             }
         }
     }
@@ -68,11 +69,11 @@ fn search(
         return score;
     }
 
-    let greater_than_three = actual_depth > 3;
+    let greater_than_three = depth > 3;
     let (base, end) = if greater_than_three {
-        (12usize, 48usize)
-    } else {
         (6, 60)
+    } else {
+        (12usize, 48usize)
     };
 
     let range = base..end;
@@ -81,9 +82,9 @@ fn search(
         let x_p = x_pos_fast(pos);
 
         let valid_col = if greater_than_three {
-            x_p < 4 && x_p > 1
-        } else {
             x_p < 5 && x_p > 0
+        } else {
+            x_p < 4 && x_p > 1
         };
 
         if !valid_col {
@@ -113,27 +114,27 @@ fn search(
 
         filtered
             .par_iter()
-            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits))
+            .map(|i| search(copy, depth - 1, *i, &cntr, &hasher, &hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     } else {
         range
             .filter_map(filter)
-            .map(|i| search(copy, max_depth, depth - 1, i, &cntr, &hasher, &hash_hits))
+            .map(|i| search(copy, depth - 1, i, &cntr, &hasher, &hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     };
 
-    let score = score + (max_score as f32 * DROP_PER_TURN);
+    score += max_score as f32 * DROP_PER_TURN;
 
-    if hash_table_range {
+    if likely(hash_table_range) {
         hasher.insert(copy.board, HashEntry { score, depth });
     }
 
     score
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct HashEntry {
     score: f32,
     depth: u8,
@@ -176,15 +177,7 @@ pub fn find_best_move_list(
         .par_iter()
         .map(|testing| Info {
             turn: *testing,
-            score: search(
-                *board,
-                depth,
-                depth,
-                *testing,
-                &cntr,
-                &hash_table,
-                &hash_hits,
-            ),
+            score: search(*board, depth, *testing, &cntr, &hash_table, &hash_hits),
         })
         .collect();
 

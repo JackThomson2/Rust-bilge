@@ -121,7 +121,7 @@ impl GameState {
                     continue;
                 }
 
-                if !can_move(piece) {
+                if unlikely(!can_move(piece)) {
                     continue;
                 }
 

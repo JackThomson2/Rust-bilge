@@ -146,6 +146,7 @@ pub fn int_to_mover(move_num: usize) -> Move {
 pub fn move_to_int(move_num: &Move) -> usize {
     move_num.x + (move_num.y * WIDTH as usize)
 }
+
 macro_rules! promote_scorers {
     ($x:expr) => {
         match $x {

@@ -181,13 +181,13 @@ impl GameState {
 
         let mut return_score: f32;
 
-        if one == CLEARED || two == CLEARED {
+        if unlikely(one == CLEARED || two == CLEARED) {
             return -20001.0;
-        } else if one == two {
+        } else if unlikely(one == two) {
             return -30001.0;
-        } else if one == CRAB || two == CRAB {
+        } else if unlikely(one == CRAB || two == CRAB) {
             return -9001.0;
-        } else if one == PUFFERFISH || two == PUFFERFISH {
+        } else if unlikely(one == PUFFERFISH || two == PUFFERFISH) {
             if one == PUFFERFISH {
                 self.puff(pos);
             } else {
@@ -198,7 +198,7 @@ impl GameState {
             self.remove_clears();
             self.shift_everything();
             something_cleared = true
-        } else if one == JELLYFISH || two == JELLYFISH {
+        } else if unlikely(one == JELLYFISH || two == JELLYFISH) {
             if one == JELLYFISH {
                 self.jelly(two);
             } else {
@@ -221,7 +221,7 @@ impl GameState {
             return score;
         }
 
-        if something_cleared {
+        if unlikely(something_cleared) {
             return_score += self.clean_board();
         }
 
@@ -292,7 +292,7 @@ impl GameState {
                 continue;
             }
 
-            if !can_move(piece) {
+            if unlikely(!can_move(piece)) {
                 continue;
             }
 
