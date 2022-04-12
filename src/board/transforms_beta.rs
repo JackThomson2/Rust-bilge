@@ -23,7 +23,7 @@ const fn build_LUT() -> [u8; 256] {
     end
 }
 
-const LUT: [u8; 256] = build_LUT();
+pub const LUT: [u8; 256] = build_LUT();
 
 #[inline(always)]
 pub unsafe fn update_all(board: &mut [u8; 72], x: usize, y: usize) {
@@ -323,6 +323,31 @@ mod tests {
         let mut max = [12, 12, 12, 12, 12, 12];
         let mut cntr = 0;
         let mut rm_track = [0; 72];
+
+        unsafe { state.simple_tracker(&mut max, &mut cntr, &mut rm_track) };
+
+        println!("Counter {}\n\nrm tracker {:?}", cntr, rm_track);
+        state.draw();
+    }
+
+    #[test]
+    fn test_jelly() {
+        let mut state = GameState {
+            board: array,
+            water_level: 0,
+            to_clear_l: 0,
+            to_clear_r: 0,
+        };
+
+        state.draw();
+
+        let mut max = [12, 12, 12, 12, 12, 12];
+        let mut cntr = 0;
+        let mut rm_track = [0; 72];
+
+        state.jelly(3);
+        println!("Clear count {}", state.clear_count());
+        state.remove_clears();
 
         unsafe { state.simple_tracker(&mut max, &mut cntr, &mut rm_track) };
 

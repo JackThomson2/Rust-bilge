@@ -150,12 +150,34 @@ impl GameState {
     }
 
     #[inline]
-    pub fn jelly(&mut self, clearing: u8) {
+    pub fn jelly_512(&mut self, clearing: u8) {
         unsafe {
             let clear_mask = x86::_mm512_set1_epi8(clearing as i8);
             let ptr = self.board.as_ptr();
             let x = x86::_mm512_loadu_si512(ptr.cast());
             self.to_clear_l |= x86::_mm512_cmpeq_epi8_mask(x, clear_mask);
+
+            for i in 64..72 {
+                let checking = self.board[i];
+
+                self.to_clear_r |= ((checking == clearing) as u16) << (i - 64);
+            }
+        }
+    }
+
+    #[inline]
+    pub fn jelly(&mut self, clearing: u8) {
+        unsafe {
+            let clear_mask = x86::_mm256_set1_epi8(clearing as i8);
+            let ptr = self.board.as_ptr();
+
+            let x = x86::_mm256_loadu_si256(ptr.cast());
+            let res = x86::_mm256_cmpeq_epi8(x, clear_mask);
+            self.to_clear_l |= x86::_mm256_movemask_epi8(res) as u64;
+
+            let x = x86::_mm256_loadu_si256(ptr.add(32).cast());
+            let res = x86::_mm256_cmpeq_epi8(x, clear_mask);
+            self.to_clear_l |= (x86::_mm256_movemask_epi8(res) as u64) << 32;
 
             for i in 64..72 {
                 let checking = self.board[i];
@@ -331,22 +353,34 @@ impl GameState {
     #[unroll_for_loops]
     #[inline]
     fn shift_everything(&mut self) {
-        for x in 0..6 {
-            let mut last = 99999;
-            for y in (0..12).rev() {
-                let pos = (y * 6) + x;
-                unsafe {
-                    let checking = *self.board.get_unchecked(pos);
-                    if checking == CLEARED && last == 99999 {
-                        last = y;
-                    }
+        unsafe {
+            for x in 0..6 {
+                let mut pos = 0;
 
-                    if last != 99999 && checking != CLEARED {
-                        let last_pos = (last * 6) + x;
-                        *self.board.get_unchecked_mut(last_pos) = checking;
-                        *self.board.get_unchecked_mut(pos) = CLEARED;
-                        last -= 1;
-                    }
+                for i in 0..12 {
+                    let writing = (pos * 6) + x;
+                    let checking = *self.board.get_unchecked_mut(((i * 6) + x) as usize);
+
+                    *self.board.get_unchecked_mut(writing) = checking;
+
+                    let offset = *LUT.get_unchecked(checking as usize) as usize;
+                    pos += offset;
+                }
+
+                match pos {
+                    0 => update_all(&mut self.board, x, 0),
+                    1 => update_all(&mut self.board, x, 1),
+                    2 => update_all(&mut self.board, x, 2),
+                    3 => update_all(&mut self.board, x, 3),
+                    4 => update_all(&mut self.board, x, 4),
+                    5 => update_all(&mut self.board, x, 5),
+                    6 => update_all(&mut self.board, x, 6),
+                    7 => update_all(&mut self.board, x, 7),
+                    8 => update_all(&mut self.board, x, 8),
+                    9 => update_all(&mut self.board, x, 9),
+                    10 => update_all(&mut self.board, x, 10),
+                    11 => update_all(&mut self.board, x, 11),
+                    _ => {}
                 }
             }
         }
