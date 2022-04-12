@@ -7,12 +7,12 @@ pub fn can_move(piece: Pieces) -> bool {
     (piece as u8) < 7
 }
 
-const fn build_x_arr() -> [usize; 72] {
+const fn build_x_arr() -> [u8; 72] {
     let mut end = [0; 72];
     let mut cntr = 0;
 
     loop {
-        end[cntr] = cntr % 6;
+        end[cntr] = (cntr % 6) as u8;
 
         cntr += 1;
         if cntr >= 72 {
@@ -23,12 +23,12 @@ const fn build_x_arr() -> [usize; 72] {
     end
 }
 
-const fn build_y_arr() -> [usize; 72] {
+const fn build_y_arr() -> [u8; 72] {
     let mut end = [0; 72];
     let mut cntr = 0;
 
     loop {
-        end[cntr] = cntr / 6;
+        end[cntr] = (cntr / 6) as u8;
 
         cntr += 1;
         if cntr >= 72 {
@@ -39,17 +39,17 @@ const fn build_y_arr() -> [usize; 72] {
     end
 }
 
-pub const X_ARR: [usize; 72] = build_x_arr();
-pub const Y_ARR: [usize; 72] = build_y_arr();
+pub const X_ARR: [u8; 72] = build_x_arr();
+pub const Y_ARR: [u8; 72] = build_y_arr();
 
 #[inline]
 pub fn x_pos_fast(x: usize) -> usize {
-    unsafe { *X_ARR.get_unchecked(x) }
+    unsafe { *X_ARR.get_unchecked(x) as usize }
 }
 
 #[inline]
 pub fn y_pos_fast(x: usize) -> usize {
-    unsafe { *Y_ARR.get_unchecked(x) }
+    unsafe { *Y_ARR.get_unchecked(x) as usize }
 }
 
 pub const PUFFER: [(u64, u16); 72] = build_puffers();
