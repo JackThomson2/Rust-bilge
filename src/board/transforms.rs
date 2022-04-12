@@ -6,6 +6,8 @@ use defs::*;
 use helpers::can_move;
 use recolored::*;
 
+use std::arch::x86_64 as x86;
+
 use unroll::unroll_for_loops;
 
 use arrayvec::ArrayVec;
@@ -148,21 +150,19 @@ impl GameState {
     }
 
     #[inline]
-    fn jelly(&mut self, clearing: defs::Pieces) {
-        let mut outer_a = 0;
-        let mut outer_b = 0;
+    pub fn jelly(&mut self, clearing: u8) {
+        unsafe {
+            let clear_mask = x86::_mm512_set1_epi8(clearing as i8);
+            let ptr = self.board.as_ptr();
+            let x = x86::_mm512_loadu_si512(ptr.cast());
+            self.to_clear_l |= x86::_mm512_cmpeq_epi8_mask(x, clear_mask);
 
-        for (loc, _pce) in self
-            .board
-            .iter()
-            .enumerate()
-            .filter(|(_loc, pce)| *pce == &clearing)
-        {
-            self.set_to_inside(&mut outer_a, &mut outer_b, loc);
+            for i in 64..72 {
+                let checking = self.board[i];
+
+                self.to_clear_r |= ((checking == clearing) as u16) << (i - 64);
+            }
         }
-
-        self.to_clear_l |= outer_a;
-        self.to_clear_r |= outer_b;
     }
 
     #[inline]
