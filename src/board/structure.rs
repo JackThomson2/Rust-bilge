@@ -3,7 +3,7 @@ use std::hash::Hasher;
 
 pub type Board = [Pieces; 6 * 12];
 
-#[derive(Clone, Copy, Hash)]
+#[derive(Clone, Copy)]
 pub struct GameState {
     pub board: Board,
     pub water_level: u8,
@@ -18,12 +18,10 @@ pub struct Move {
 }
 
 #[inline(always)]
-pub fn make_hash(brd: &[u8; 72], depth: u8) -> u64 {
+pub fn make_hash(brd: &[u8; 72]) -> u64 {
     let mut hashing = ahash::AHasher::default();
 
     hashing.write(brd);
-    hashing.write_u8(depth);
-
     hashing.finish()
 }
 

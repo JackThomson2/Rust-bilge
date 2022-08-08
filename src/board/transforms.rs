@@ -7,8 +7,7 @@ use helpers::can_move;
 use recolored::*;
 
 use std::arch::x86_64 as x86;
-
-use unroll::unroll_for_loops;
+use crate::macros::SafeGetters;
 
 use arrayvec::ArrayVec;
 
@@ -63,15 +62,10 @@ impl GameState {
 
     #[inline(always)]
     pub fn set_to_clear(&mut self, new_value: usize) {
-        if unlikely(new_value > 64) {
-            let mask = 1 << (new_value - 64);
-            self.to_clear_r |= mask;
-            return;
-        }
+        let masks = SET_BIT_MASKS.get_safely(new_value);
 
-        let mask = 1 << new_value;
-
-        self.to_clear_l |= mask;
+        self.to_clear_l |= masks.0;
+        self.to_clear_r |= masks.1;
     }
 
     #[inline(always)]
@@ -82,27 +76,22 @@ impl GameState {
 
     #[inline(always)]
     pub fn set_to_inside(&self, a: &mut u64, b: &mut u16, new_value: usize) {
-        if unlikely(new_value > 64) {
-            let mask = 1 << (new_value - 64);
-            *b |= mask;
-            return;
-        }
+        let masks = SET_BIT_MASKS.get_safely(new_value);
 
-        let mask = 1 << new_value;
-
-        *a |= mask;
+        *a |= masks.0;
+        *b |= masks.1;
     }
 
     #[inline(always)]
     pub fn set_start(&mut self, new_value: usize) {
-        if unlikely(new_value == 64) {
+        if unlikely(new_value == 63) {
             self.set_to_clear(new_value);
             self.set_to_clear(new_value + 1);
 
             return;
         }
 
-        if unlikely(new_value > 64) {
+        if unlikely(new_value >= 64) {
             const START: u16 = 0b_0011;
             self.to_clear_r |= START << (new_value - 64);
             return;
@@ -128,24 +117,19 @@ impl GameState {
 
         self.to_clear_r ^= pos;
 
-        return new_pos as usize + 64;
+        new_pos as usize + 64
     }
 
     #[inline]
     pub fn remove_clears(&mut self) {
-        if self.clear_count() == 0 {
-            return;
+        while self.to_clear_l != 0 {
+            let loc = self.get_position();
+            *self.board.get_mut_safely(loc) = CLEARED;
         }
 
-        loop {
-            unsafe {
-                let loc = self.get_position();
-                *self.board.get_unchecked_mut(loc) = CLEARED;
-            }
-
-            if self.clear_count() == 0 {
-                break;
-            }
+        while self.to_clear_r != 0 {
+            let loc = self.get_position();
+            *self.board.get_mut_safely(loc) = CLEARED;
         }
     }
 
@@ -189,7 +173,7 @@ impl GameState {
 
     #[inline]
     fn puff(&mut self, pos: usize) {
-        let pair = unsafe { *PUFFER.get_unchecked(pos) };
+        let pair = *PUFFER.get_safely(pos);
         self.apply_pair_to_self(pair)
     }
 
@@ -198,8 +182,8 @@ impl GameState {
         self.reset_clears();
         let something_cleared;
 
-        let one = unsafe { *self.board.get_unchecked(pos) };
-        let two = unsafe { *self.board.get_unchecked(pos + 1) };
+        let one = *self.board.get_safely(pos);
+        let two = *self.board.get_safely(pos + 1);
 
         let mut return_score: f32;
 
@@ -232,8 +216,8 @@ impl GameState {
             self.shift_everything();
             something_cleared = true
         } else {
-            unsafe { *self.board.get_unchecked_mut(pos) = two };
-            unsafe { *self.board.get_unchecked_mut(pos + 1) = one };
+            *self.board.get_mut_safely(pos) = two;
+            *self.board.get_mut_safely(pos + 1) = one;
 
             let mut score = self.get_combo(pos) as f32;
 
@@ -265,7 +249,7 @@ impl GameState {
                     return None;
                 }
 
-                let right = unsafe { *self.board.get_unchecked(pos + 1) };
+                let right = *self.board.get_safely(pos + 1);
                 if right == CLEARED || right == NULL || right == CRAB || right == left {
                     return None;
                 }
@@ -318,29 +302,27 @@ impl GameState {
                 continue;
             }
 
-            unsafe {
-                if x < 4
-                    && pos < board_size - 2
-                    && piece == *self.board.get_unchecked(pos + 1)
-                    && piece == *self.board.get_unchecked(pos + 2)
-                {
-                    self.set_to_inside(&mut outer_a, &mut outer_b, pos);
-                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 1);
-                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 2);
+            if x < 4
+                && pos < board_size - 2
+                && piece == *self.board.get_safely(pos + 1)
+                && piece == *self.board.get_safely(pos + 2)
+            {
+                self.set_to_inside(&mut outer_a, &mut outer_b, pos);
+                self.set_to_inside(&mut outer_a, &mut outer_b, pos + 1);
+                self.set_to_inside(&mut outer_a, &mut outer_b, pos + 2);
 
-                    returning = true;
-                }
+                returning = true;
+            }
 
-                if pos < 60
-                    && piece == *self.board.get_unchecked(pos + 6)
-                    && piece == *self.board.get_unchecked(pos + 12)
-                {
-                    self.set_to_inside(&mut outer_a, &mut outer_b, pos);
-                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 6);
-                    self.set_to_inside(&mut outer_a, &mut outer_b, pos + 12);
+            if pos < 60
+                && piece == *self.board.get_safely(pos + 6)
+                && piece == *self.board.get_safely(pos + 12)
+            {
+                self.set_to_inside(&mut outer_a, &mut outer_b, pos);
+                self.set_to_inside(&mut outer_a, &mut outer_b, pos + 6);
+                self.set_to_inside(&mut outer_a, &mut outer_b, pos + 12);
 
-                    returning = true;
-                }
+                returning = true;
             }
         }
 
@@ -350,38 +332,33 @@ impl GameState {
         (returning, bonus_score)
     }
 
-    #[unroll_for_loops]
     #[inline]
     fn shift_everything(&mut self) {
-        unsafe {
-            for x in 0..6 {
-                let mut pos = 0;
+        for x in 0..6 {
+            let mut pos = 11;
 
-                for i in 0..12 {
-                    let writing = (pos * 6) + x;
-                    let checking = *self.board.get_unchecked_mut(((i * 6) + x) as usize);
+            for i in (0..12).rev() {
+                let writing = (pos * 6) + x;
+                let checking = *self.board.get_mut_safely(((i * 6) + x) as usize);
 
-                    *self.board.get_unchecked_mut(writing) = checking;
+                *self.board.get_mut_safely(writing) = checking;
 
-                    let offset = *LUT.get_unchecked(checking as usize) as usize;
-                    pos += offset;
-                }
-
-                match pos {
-                    0 => update_all(&mut self.board, x, 0),
-                    1 => update_all(&mut self.board, x, 1),
-                    2 => update_all(&mut self.board, x, 2),
-                    3 => update_all(&mut self.board, x, 3),
-                    4 => update_all(&mut self.board, x, 4),
-                    5 => update_all(&mut self.board, x, 5),
-                    6 => update_all(&mut self.board, x, 6),
-                    7 => update_all(&mut self.board, x, 7),
-                    8 => update_all(&mut self.board, x, 8),
-                    9 => update_all(&mut self.board, x, 9),
-                    10 => update_all(&mut self.board, x, 10),
-                    11 => update_all(&mut self.board, x, 11),
-                    _ => {}
-                }
+                let offset = *LUT.get_safely(checking as usize) as usize;
+                pos -= offset;
+            }
+            match pos {
+                0 => update_all(&mut self.board, x, 0),
+                1 => update_all(&mut self.board, x, 1),
+                2 => update_all(&mut self.board, x, 2),
+                3 => update_all(&mut self.board, x, 3),
+                4 => update_all(&mut self.board, x, 4),
+                5 => update_all(&mut self.board, x, 5),
+                6 => update_all(&mut self.board, x, 6),
+                7 => update_all(&mut self.board, x, 7),
+                8 => update_all(&mut self.board, x, 8),
+                9 => update_all(&mut self.board, x, 9),
+                10 => update_all(&mut self.board, x, 10),
+                _ => {}
             }
         }
     }
@@ -390,8 +367,8 @@ impl GameState {
     fn get_combo(&self, pos: usize) -> i32 {
         let x = x_pos_fast(pos);
 
-        let left_piece = unsafe { self.board.get_unchecked(pos) };
-        let right_piece = unsafe { self.board.get_unchecked(pos + 1) };
+        let left_piece = self.board.get_safely(pos);
+        let right_piece = self.board.get_safely(pos + 1);
 
         let mut mult_ct = 0;
 
@@ -400,49 +377,47 @@ impl GameState {
         let mut right = 0; //right 3 pieces
         let mut r_col = 1; //left column of 5 pieces
 
-        unsafe {
-            if x >= 2
-                && self.board.get_unchecked(pos - 1) == left_piece
-                && self.board.get_unchecked(pos - 2) == left_piece
-            {
-                left = 3;
-                mult_ct = 1;
-            }
+        if x >= 2
+            && self.board.get_safely(pos - 1) == left_piece
+            && self.board.get_safely(pos - 2) == left_piece
+        {
+            left = 3;
+            mult_ct = 1;
+        }
 
-            if x < 3
-                && self.board.get_unchecked(pos + 2) == right_piece
-                && self.board.get_unchecked(pos + 3) == right_piece
-            {
-                right = 3;
-                mult_ct += 1;
-            }
+        if x < 3
+            && self.board.get_safely(pos + 2) == right_piece
+            && self.board.get_safely(pos + 3) == right_piece
+        {
+            right = 3;
+            mult_ct += 1;
+        }
 
-            if pos > 5 && self.board.get_unchecked(pos - 6) == left_piece {
+        if pos > 5 && self.board.get_safely(pos - 6) == left_piece {
+            l_col += 1;
+            if pos > 11 && self.board.get_safely(pos - 12) == left_piece {
                 l_col += 1;
-                if pos > 11 && self.board.get_unchecked(pos - 12) == left_piece {
-                    l_col += 1;
-                }
             }
+        }
 
-            if pos < 66 && self.board.get_unchecked(pos + 6) == left_piece {
+        if pos < 66 && self.board.get_safely(pos + 6) == left_piece {
+            l_col += 1;
+            if pos < 60 && self.board.get_safely(pos + 12) == left_piece {
                 l_col += 1;
-                if pos < 60 && self.board.get_unchecked(pos + 12) == left_piece {
-                    l_col += 1;
-                }
             }
+        }
 
-            if pos > 4 && self.board.get_unchecked(pos - 5) == right_piece {
+        if pos > 4 && self.board.get_safely(pos - 5) == right_piece {
+            r_col += 1;
+            if pos > 10 && self.board.get_safely(pos - 11) == right_piece {
                 r_col += 1;
-                if pos > 10 && self.board.get_unchecked(pos - 11) == right_piece {
-                    r_col += 1;
-                }
             }
+        }
 
-            if pos < 65 && self.board.get_unchecked(pos + 7) == right_piece {
+        if pos < 65 && self.board.get_safely(pos + 7) == right_piece {
+            r_col += 1;
+            if pos < 59 && self.board.get_safely(pos + 13) == right_piece {
                 r_col += 1;
-                if pos < 59 && self.board.get_unchecked(pos + 13) == right_piece {
-                    r_col += 1;
-                }
             }
         }
 

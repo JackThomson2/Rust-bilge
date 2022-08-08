@@ -44,12 +44,12 @@ pub const Y_ARR: [u8; 72] = build_y_arr();
 
 #[inline]
 pub fn x_pos_fast(x: usize) -> usize {
-    unsafe { *X_ARR.get_unchecked(x) as usize }
+    *safe_get!(X_ARR, x) as usize
 }
 
 #[inline]
 pub fn y_pos_fast(x: usize) -> usize {
-    unsafe { *Y_ARR.get_unchecked(x) as usize }
+    *safe_get!(Y_ARR, x) as usize
 }
 
 pub const PUFFER: [(u64, u16); 72] = build_puffers();
@@ -168,3 +168,31 @@ macro_rules! row_score {
         }
     };
 }
+
+
+pub const fn build_set_masks() -> [(u64, u16); 72] {
+    let mut end = [(0, 0); 72];
+    let mut pos = 0;
+
+    loop {
+        let mut pair = (0, 0);
+
+        if pos >= 64 {
+            let mask = 1 << (pos - 64);
+            pair.1 |= mask;
+        } else {
+            let mask = 1 << pos;
+            pair.0 |= mask;
+        }
+
+        end[pos] = pair;
+
+        pos += 1;
+        if pos >= 72 {
+            break;
+        }
+    }
+    end
+}
+
+pub const SET_BIT_MASKS: [(u64, u16); 72] = build_set_masks();
