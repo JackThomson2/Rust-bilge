@@ -1,13 +1,16 @@
-use crate::board::make_hash;
 use crate::board::GameState;
 
 use crate::board::Board;
+use crate::macros::SafeGetters;
 use atomic_counter::AtomicCounter;
 use dashmap::DashMap;
 use rayon::prelude::*;
 use std::cmp::Ordering;
+use std::intrinsics::likely;
+use std::intrinsics::unlikely;
 use std::sync::Arc;
 
+use super::helpers::{x_pos_fast, y_pos_fast};
 use ahash::RandomState;
 
 use super::defs::{CLEARED, CRAB, NULL};
@@ -42,7 +45,6 @@ pub const NULL_MOVE: Info = Info {
 #[inline]
 fn search(
     mut copy: GameState,
-    max_depth: u8,
     depth: u8,
     move_number: usize,
     cntr: &atomic_counter::RelaxedCounter,
@@ -50,17 +52,17 @@ fn search(
     hash_hits: &atomic_counter::RelaxedCounter,
 ) -> f32 {
     //cntr.inc();
-    let score = copy.swap(move_number);
-    let actual_depth = (max_depth - depth) + 1;
+    debug_assert!(y_pos_fast(move_number) == y_pos_fast(move_number + 1));
 
+    let mut score = copy.swap(move_number);
     let hash_table_range = depth > 1;
 
-    if hash_table_range {
-        //hashed = make_hash(&copy.board, depth);
-        if let Some(found) = hasher.get(&copy.board) {
-            // hash_hits.inc();
-            if found.depth >= depth {
-                return found.score;
+    if likely(hash_table_range) {
+        let found = hasher.get(&copy.board);
+
+        if let Some(entry) = found {
+            if entry.depth >= depth {
+                return entry.score;
             }
         }
     }
@@ -69,34 +71,35 @@ fn search(
         return score;
     }
 
-    let greater_than_three = actual_depth > 3;
+    let greater_than_three = depth > 2;
+    
     let (base, end) = if greater_than_three {
-        (12usize, 48usize)
+        (6, 66)
     } else {
-        (6, 60)
+        (12usize, 56usize)
     };
 
     let range = base..end;
 
     let filter = |pos: usize| {
-        let x_p = x_pos!(pos);
+        let x_p = x_pos_fast(pos);
 
         let valid_col = if greater_than_three {
-            x_p < 4 && x_p > 1
+            x_p < 5
         } else {
-            x_p < 5 && x_p > 0
+            x_p < 4 && x_p > 1
         };
 
         if !valid_col {
             return None;
         }
 
-        let left = unsafe { *copy.board.get_unchecked(pos) };
+        let left = *copy.board.get_safely(pos);
         if left == CLEARED || left == NULL || left == CRAB {
             return None;
         }
 
-        let right = unsafe { *copy.board.get_unchecked(pos + 1) };
+        let right = *copy.board.get_safely(pos + 1);
         if right == CLEARED || right == NULL || right == CRAB || right == left {
             return None;
         }
@@ -106,35 +109,34 @@ fn search(
             return None;
         }
 
+        debug_assert!(y_pos_fast(pos) == y_pos_fast(pos + 1));
+
         Some(pos)
     };
 
     let max_score = if depth > 3 {
-        let filtered: arrayvec::ArrayVec<usize, 54> = range.filter_map(filter).collect();
-
-        filtered
-            .par_iter()
-            .map(|i| search(copy, max_depth, depth - 1, *i, &cntr, &hasher, &hash_hits))
+        range.into_par_iter().filter_map(filter)
+            .map(|i| search(copy, depth - 1, i, cntr, hasher, hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     } else {
         range
             .filter_map(filter)
-            .map(|i| search(copy, max_depth, depth - 1, i, &cntr, &hasher, &hash_hits))
+            .map(|i| search(copy, depth - 1, i, cntr, hasher, hash_hits))
             .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
             .unwrap_or(0.0)
     };
 
-    let score = score + (max_score as f32 * DROP_PER_TURN);
+    score += max_score as f32 * DROP_PER_TURN;
 
-    if hash_table_range {
+    if likely(hash_table_range) {
         hasher.insert(copy.board, HashEntry { score, depth });
     }
 
     score
 }
 
-#[derive(Debug, Copy, Clone)]
+#[derive(Copy, Clone)]
 pub struct HashEntry {
     score: f32,
     depth: u8,
@@ -177,15 +179,7 @@ pub fn find_best_move_list(
         .par_iter()
         .map(|testing| Info {
             turn: *testing,
-            score: search(
-                *board,
-                depth,
-                depth,
-                *testing,
-                &cntr,
-                &hash_table,
-                &hash_hits,
-            ),
+            score: search(*board, depth, *testing, &cntr, hash_table, &hash_hits),
         })
         .collect();
 

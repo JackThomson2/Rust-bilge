@@ -9,17 +9,17 @@ edition = "2018"
 [features]
 
 [dependencies]
-atomic-counter = "1"
-rand = "*"
-typenum = "1.4"
-dashmap = "=4.0.0-rc6"
+atomic-counter = "1.0.1"
+rand = "0.8.4"
+typenum = "1.15.0"
 recolored = { git = "https://github.com/tforgione/colored" }
-mimalloc = { version = "*", default-features = false }
-snmalloc-rs = {version = "0.2", features = ["build_cc", "native-cpu", "cache-friendly", "16mib"] }
-rayon = { version = "1.5.0" }
-ahash = { version = "0.7" }
-arrayvec = { version = "0.7.1"}
+mimalloc = { version = "0.1.27", default-features = false }
+snmalloc-rs = { version = "0.2.28", features = ["build_cc", "native-cpu", "cache-friendly", "16mib"] }
+rayon = "1.5.1"
+ahash = "0.7.6"
+arrayvec = "0.7.2"
 unroll = "0.1.5"
+dashmap = "*"
 
 [profile.release]
 panic = "abort"

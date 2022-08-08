@@ -7,22 +7,121 @@ pub fn can_move(piece: Pieces) -> bool {
     (piece as u8) < 7
 }
 
-macro_rules! x_pos {
-    ($x:expr) => {
-        $x % 6
+const fn build_x_arr() -> [u8; 72] {
+    let mut end = [0; 72];
+    let mut cntr = 0;
+
+    loop {
+        end[cntr] = (cntr % 6) as u8;
+
+        cntr += 1;
+        if cntr >= 72 {
+            break;
+        }
+    }
+
+    end
+}
+
+const fn build_y_arr() -> [u8; 72] {
+    let mut end = [0; 72];
+    let mut cntr = 0;
+
+    loop {
+        end[cntr] = (cntr / 6) as u8;
+
+        cntr += 1;
+        if cntr >= 72 {
+            break;
+        }
+    }
+
+    end
+}
+
+pub const X_ARR: [u8; 72] = build_x_arr();
+pub const Y_ARR: [u8; 72] = build_y_arr();
+
+#[inline]
+pub fn x_pos_fast(x: usize) -> usize {
+    *safe_get!(X_ARR, x) as usize
+}
+
+#[inline]
+pub fn y_pos_fast(x: usize) -> usize {
+    *safe_get!(Y_ARR, x) as usize
+}
+
+pub const PUFFER: [(u64, u16); 72] = build_puffers();
+
+macro_rules! apply_to_pair {
+    ($pair:expr, $pos:expr) => {
+        if $pos >= 64 {
+            $pair.1 |= 1 << ($pos - 64);
+        } else {
+            $pair.0 |= 1 << $pos;
+        }
     };
 }
 
-macro_rules! y_pos {
-    ($x:expr) => {
-        $x / 6
-    };
+pub const fn build_puffers() -> [(u64, u16); 72] {
+    let mut end = [(0, 0); 72];
+    let mut pos = 0;
+
+    loop {
+        let x = X_ARR[pos];
+        let y = Y_ARR[pos];
+
+        let mut pair = (0, 0);
+
+        apply_to_pair!(pair, pos);
+
+        let up = y > 0;
+        let down = y < 11;
+        let right = x < 5;
+        let left = x > 0;
+
+        if up {
+            apply_to_pair!(pair, pos - 6);
+        }
+        if down {
+            apply_to_pair!(pair, pos + 6);
+        }
+        if left {
+            apply_to_pair!(pair, pos - 1);
+        }
+        if right {
+            apply_to_pair!(pair, pos + 1);
+        }
+
+        if up && right {
+            apply_to_pair!(pair, pos - 5);
+        }
+        if up && left {
+            apply_to_pair!(pair, pos - 7);
+        }
+        if down && right {
+            apply_to_pair!(pair, pos + 7);
+        }
+        if down && left {
+            apply_to_pair!(pair, pos + 5);
+        }
+
+        end[pos] = pair;
+
+        pos += 1;
+        if pos >= 72 {
+            break;
+        }
+    }
+
+    end
 }
 
 #[inline]
 pub fn move_to_dani_move(movement: usize) -> usize {
-    let x = x_pos!(movement);
-    let y = 12 - y_pos!(movement);
+    let x = x_pos_fast(movement);
+    let y = 12 - y_pos_fast(movement);
 
     (y * 5) + x
 }
@@ -69,3 +168,31 @@ macro_rules! row_score {
         }
     };
 }
+
+
+pub const fn build_set_masks() -> [(u64, u16); 72] {
+    let mut end = [(0, 0); 72];
+    let mut pos = 0;
+
+    loop {
+        let mut pair = (0, 0);
+
+        if pos >= 64 {
+            let mask = 1 << (pos - 64);
+            pair.1 |= mask;
+        } else {
+            let mask = 1 << pos;
+            pair.0 |= mask;
+        }
+
+        end[pos] = pair;
+
+        pos += 1;
+        if pos >= 72 {
+            break;
+        }
+    }
+    end
+}
+
+pub const SET_BIT_MASKS: [(u64, u16); 72] = build_set_masks();

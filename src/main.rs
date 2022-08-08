@@ -1,4 +1,9 @@
 #![feature(thread_local)]
+#![feature(core_intrinsics)]
+#![feature(stdsimd)]
+
+#[macro_use]
+mod macros;
 
 pub mod board;
 
@@ -53,7 +58,7 @@ fn main() {
             return;
         }
 
-        let mut input = String::new();
+        let mut input = String::with_capacity(200);
 
         while let Ok(_read) = std::io::stdin().read_line(&mut input) {
             let len = input.trim_end_matches(&['\r', '\n'][..]).len();
@@ -66,8 +71,8 @@ fn main() {
                 continue;
             }
 
-            let water_level = u8::from_str_radix(&commands[2], 10).unwrap();
-            let depth = u8::from_str_radix(&commands[1], 10).unwrap();
+            let water_level = u8::from_str_radix(commands[2], 10).unwrap();
+            let depth = u8::from_str_radix(commands[1], 10).unwrap();
 
             let now = Instant::now();
             let game = board::board_from_str(&commands[0], water_level);
@@ -91,7 +96,7 @@ fn main() {
                 now.elapsed()
             );
 
-            input = String::new();
+            input = String::with_capacity(200);
 
             let random = RandomState::new();
             hash_table = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
@@ -106,10 +111,10 @@ fn bench(map: &mut HashTable) {
 
     let run_count = 10;
     let mut average = 0;
-
+    
     for i in 0..run_count {
         let now = Instant::now();
-        let _best_moves = board::searcher::find_best_move_list(&game, 5, false, map);
+        let _best_moves = board::searcher::find_best_move_list(&game, 7, false, map);
         let time_taken = now.elapsed();
 
         println!(
