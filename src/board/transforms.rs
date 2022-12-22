@@ -285,7 +285,6 @@ impl GameState {
 
         for (pos, piece) in self.board.iter().enumerate() {
             let piece = *piece;
-            let x = x_pos_fast(pos);
             let y = y_pos_fast(pos);
 
             let board_size = 72;
@@ -301,9 +300,10 @@ impl GameState {
             if unlikely(!can_move(piece)) {
                 continue;
             }
+            
+            let x = x_pos_fast(pos);
 
             if x < 4
-                && pos < board_size - 2
                 && piece == *self.board.get_safely(pos + 1)
                 && piece == *self.board.get_safely(pos + 2)
             {
@@ -333,7 +333,7 @@ impl GameState {
     }
 
     #[inline]
-    fn shift_everything(&mut self) {
+    pub fn shift_everything(&mut self) {
         for x in 0..6 {
             let mut pos = 11;
 

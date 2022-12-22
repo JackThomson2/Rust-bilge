@@ -2,12 +2,10 @@ use crate::board::GameState;
 
 use crate::board::Board;
 use crate::macros::SafeGetters;
-use atomic_counter::AtomicCounter;
 use dashmap::DashMap;
 use rayon::prelude::*;
 use std::cmp::Ordering;
 use std::intrinsics::likely;
-use std::intrinsics::unlikely;
 use std::sync::Arc;
 
 use super::helpers::{x_pos_fast, y_pos_fast};
@@ -15,7 +13,7 @@ use ahash::RandomState;
 
 use super::defs::{CLEARED, CRAB, NULL};
 
-const DROP_PER_TURN: f32 = 0.9;
+const DROP_PER_TURN: f32 = 0.95;
 
 #[derive(Debug, Copy, Clone)]
 pub struct Info {
@@ -47,15 +45,13 @@ fn search(
     mut copy: GameState,
     depth: u8,
     move_number: usize,
-    cntr: &atomic_counter::RelaxedCounter,
     hasher: &HashTable,
-    hash_hits: &atomic_counter::RelaxedCounter,
 ) -> f32 {
     //cntr.inc();
     debug_assert!(y_pos_fast(move_number) == y_pos_fast(move_number + 1));
 
     let mut score = copy.swap(move_number);
-    let hash_table_range = depth > 1;
+    let hash_table_range = depth > 2;
 
     if likely(hash_table_range) {
         let found = hasher.get(&copy.board);
@@ -116,14 +112,14 @@ fn search(
 
     let max_score = if depth > 3 {
         range.into_par_iter().filter_map(filter)
-            .map(|i| search(copy, depth - 1, i, cntr, hasher, hash_hits))
-            .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
+            .map(|i| search(copy, depth - 1, i, hasher))
+            .max_by(|x, y| unsafe { x.partial_cmp(y).unwrap_unchecked() })
             .unwrap_or(0.0)
     } else {
         range
             .filter_map(filter)
-            .map(|i| search(copy, depth - 1, i, cntr, hasher, hash_hits))
-            .max_by(|x, y| x.partial_cmp(y).unwrap_or(Ordering::Equal))
+            .map(|i| search(copy, depth - 1, i, hasher))
+            .max_by(|x, y| unsafe { x.partial_cmp(y).unwrap_unchecked() } )
             .unwrap_or(0.0)
     };
 
@@ -172,33 +168,21 @@ pub fn find_best_move_list(
     hash_table: &HashTable,
 ) -> TurnList {
     let possible_moves = board.get_moves();
-    let cntr = Arc::new(atomic_counter::RelaxedCounter::new(0));
-    let hash_hits = Arc::new(atomic_counter::RelaxedCounter::new(0));
 
     let mut best_move: Vec<Info> = possible_moves
         .par_iter()
         .map(|testing| Info {
             turn: *testing,
-            score: search(*board, depth, *testing, &cntr, hash_table, &hash_hits),
+            score: search(*board, depth, *testing, hash_table),
         })
         .collect();
 
     best_move.sort_unstable_by(|a, b| b.score.partial_cmp(&a.score).unwrap_or(Ordering::Equal));
 
-    if verbose {
-        println!(
-            "Searched {} positions, {} hash hits",
-            cntr.get(),
-            hash_hits.get(),
-        );
-    }
 
     TurnList {
         turns: best_move,
         info_str: format!(
-            "Searched {} positions, {} hash hits.",
-            cntr.get(),
-            hash_hits.get()
-        ),
+            "Done"),
     }
 }

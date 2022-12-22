@@ -241,16 +241,12 @@ impl GameState {
                 returning = true;
 
                 self.set_to_clear(pos);
-                if x_right_range > 0 {
-                    for x_range in 1..x_right_range + 1 {
-                        self.set_to_clear(pos + x_range);
-                    }
+                for x_range in 0..x_right_range {
+                    self.set_to_clear(pos + x_range + 1);
                 }
 
-                if x_left_range > 0 {
-                    for x_range in 1..x_left_range + 1 {
-                        self.set_to_clear(pos - x_range);
-                    }
+                for x_range in 0..x_left_range {
+                    self.set_to_clear(pos - (x_range + 1));
                 }
             }
 
@@ -280,7 +276,7 @@ impl GameState {
 
 #[cfg(test)]
 mod tests {
-    use bilge::board::GameState;
+    use crate::board::GameState;
 
     const C: u8 = 0b0000_1010;
 
@@ -299,8 +295,7 @@ mod tests {
         8, 8, 8, 8, 8, 8, 
         C, C, C, C, C, C,
     ];
-
-    
+        
     #[rustfmt::skip]
     const array_full: [u8; 72] = [
         8, 8, 8, 8, 8, 8, 
@@ -353,7 +348,11 @@ mod tests {
         state.jelly(7);
 
         state.remove_clears();
+        state.draw();
+        state.shift_everything();
+        state.draw();
 
+        state.clean_board();
         state.draw();
     }
 
@@ -379,6 +378,43 @@ mod tests {
         state.simple_tracker(&mut max, &mut cntr, &mut rm_track);
 
         println!("Counter {}\n\nrm tracker {:?}", cntr, rm_track);
+        state.draw();
+    }
+
+    #[rustfmt::skip]
+    const array_full_falling: [u8; 72] = [
+        1, 1, 2, 2, 1, 1, 
+        2, 1, 1, 1, 2, 2, 
+        3, 2, 2, 4, 5, 1, 
+        1, 2, 3, 4, 5, 5, 
+        2, 2, 2, 2, 2, 2,
+        8, 8, 8, 8, 8, 8, 
+        5, 5, 5, 5, 5, 5, 
+        7, 7, 7, 7, 7, 7, 
+        8, 8, 8, 8, 8, 8, 
+        3, 3, 3, 3, 3, 3, 
+        8, 8, 8, 8, 8, 8, 
+        7, 7, 7, 6, 6, 7,
+    ];
+
+    
+    #[test]
+    fn test_dropping_multi_breaks() {
+        let mut brd = array_full_falling;
+        brd.reverse();
+        let mut state = GameState {
+            board: brd,
+            water_level: 0,
+            to_clear_l: 0,
+            to_clear_r: 0,
+        };
+
+        state.draw_highlight(64);
+
+        let score = state.clean_board_beta(64);
+        
+        println!("Score #{score}");
+
         state.draw();
     }
 }

@@ -152,7 +152,7 @@ macro_rules! promote_scorers {
         match $x {
             2 => 2,
             3 => 100,
-            4 => 10000,
+            4 => 100000,
             _ => $x,
         }
     };

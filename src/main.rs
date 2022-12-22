@@ -25,7 +25,7 @@ fn main() {
     let args: Vec<String> = env::args().collect();
     let random = RandomState::new();
 
-    let mut hash_table: HashTable = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
+    let mut hash_table: HashTable = dashmap::DashMap::with_capacity_and_hasher(10_000_000, random);
 
     let arg_count = args.len();
 
@@ -114,7 +114,7 @@ fn bench(map: &mut HashTable) {
     
     for i in 0..run_count {
         let now = Instant::now();
-        let _best_moves = board::searcher::find_best_move_list(&game, 7, false, map);
+        let _best_moves = board::searcher::find_best_move_list(&game, 6, false, map);
         let time_taken = now.elapsed();
 
         println!(
@@ -126,7 +126,7 @@ fn bench(map: &mut HashTable) {
         );
 
         let random = RandomState::new();
-        *map = dashmap::DashMap::with_capacity_and_hasher(40_000_000, random);
+        *map = dashmap::DashMap::with_capacity_and_hasher(10_000_000, random);
 
         average += time_taken.as_millis();
     }
