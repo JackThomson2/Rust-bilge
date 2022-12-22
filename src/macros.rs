@@ -26,20 +26,25 @@ pub trait SafeGetters<T> {
 }
 
 impl<T> SafeGetters<T> for [T] {
+    #[inline(always)]
     fn get_safely(&self, idx:usize) -> &T {
         safe_get!(self, idx)
     }
 
+    #[inline(always)]
     fn get_mut_safely(&mut self, idx:usize) -> &mut T {
         get_mut_safely!(self, idx)
     }
 }
 
 impl <T, const C: usize> SafeGetters<T> for [T; C] {
+    #[track_caller]
+    #[inline(always)]
     fn get_safely(&self, idx:usize) -> &T {
         safe_get!(self, idx)
     }
-
+    #[track_caller]
+    #[inline(always)]
     fn get_mut_safely(&mut self, idx:usize) -> &mut T {
         get_mut_safely!(self, idx)
     }

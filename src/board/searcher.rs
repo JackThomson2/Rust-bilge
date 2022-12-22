@@ -1,5 +1,7 @@
 use crate::board::GameState;
 
+use super::redundant_move_filter::*;
+
 use crate::board::Board;
 use crate::macros::SafeGetters;
 use dashmap::DashMap;
@@ -44,8 +46,10 @@ pub const NULL_MOVE: Info = Info {
 fn search(
     mut copy: GameState,
     depth: u8,
+    total_depth: u8,
     move_number: usize,
     hasher: &HashTable,
+    prev_move_map: u64
 ) -> f32 {
     //cntr.inc();
     debug_assert!(y_pos_fast(move_number) == y_pos_fast(move_number + 1));
@@ -66,6 +70,8 @@ fn search(
     if score < 0.0 || depth == 1 {
         return score;
     }
+
+    let new_mask = record_move(total_depth, depth, prev_move_map, move_number, score > 0.0); 
 
     let greater_than_three = depth > 2;
     
@@ -105,6 +111,10 @@ fn search(
             return None;
         }
 
+        if check_if_previously_run(pos, prev_move_map) {
+            return None;
+        }
+
         debug_assert!(y_pos_fast(pos) == y_pos_fast(pos + 1));
 
         Some(pos)
@@ -112,13 +122,13 @@ fn search(
 
     let max_score = if depth > 3 {
         range.into_par_iter().filter_map(filter)
-            .map(|i| search(copy, depth - 1, i, hasher))
+            .map(|i| search(copy, depth - 1, depth, i, hasher, new_mask))
             .max_by(|x, y| unsafe { x.partial_cmp(y).unwrap_unchecked() })
             .unwrap_or(0.0)
     } else {
         range
             .filter_map(filter)
-            .map(|i| search(copy, depth - 1, i, hasher))
+            .map(|i| search(copy, depth - 1, depth, i, hasher, new_mask))
             .max_by(|x, y| unsafe { x.partial_cmp(y).unwrap_unchecked() } )
             .unwrap_or(0.0)
     };
@@ -173,7 +183,7 @@ pub fn find_best_move_list(
         .par_iter()
         .map(|testing| Info {
             turn: *testing,
-            score: search(*board, depth, *testing, hash_table),
+            score: search(*board, depth, depth, *testing, hash_table, 0),
         })
         .collect();
 

@@ -7,6 +7,7 @@ pub mod searcher;
 pub mod structure;
 pub mod transforms;
 pub mod transforms_beta;
+pub mod redundant_move_filter;
 
 pub use generator::*;
 pub use helpers::*;

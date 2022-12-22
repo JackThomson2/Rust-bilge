@@ -335,10 +335,10 @@ impl GameState {
     #[inline]
     pub fn shift_everything(&mut self) {
         for x in 0..6 {
-            let mut pos = 11;
+            let mut pos = 12;
 
             for i in (0..12).rev() {
-                let writing = (pos * 6) + x;
+                let writing = ((pos - 1) * 6) + x;
                 let checking = *self.board.get_mut_safely(((i * 6) + x) as usize);
 
                 *self.board.get_mut_safely(writing) = checking;
@@ -347,7 +347,7 @@ impl GameState {
                 pos -= offset;
             }
             match pos {
-                0 => update_all(&mut self.board, x, 0),
+                0 => {},
                 1 => update_all(&mut self.board, x, 1),
                 2 => update_all(&mut self.board, x, 2),
                 3 => update_all(&mut self.board, x, 3),
@@ -358,6 +358,7 @@ impl GameState {
                 8 => update_all(&mut self.board, x, 8),
                 9 => update_all(&mut self.board, x, 9),
                 10 => update_all(&mut self.board, x, 10),
+                11 => update_all(&mut self.board, x, 11),
                 _ => {}
             }
         }
